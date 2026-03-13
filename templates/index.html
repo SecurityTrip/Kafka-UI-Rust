@@ -109,26 +109,89 @@
         <article class="panel" id="brokers-panel" data-view="brokers">
           <div class="panel-head">
             <h2 id="brokers-title">Brokers ({{ brokers.len() }})</h2>
+            <input id="brokers-search" class="panel-search" type="search" placeholder="Filter brokers..." />
+          </div>
+          <div class="broker-kpis" id="brokers-kpis">
+            <div class="broker-kpi-group">
+              <div class="broker-kpi-group-title">Uptime</div>
+              <div class="broker-kpi-grid">
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Broker Count</span>
+                  <strong id="broker-kpi-count">-</strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Active Controller</span>
+                  <strong id="broker-kpi-controller">-</strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Version</span>
+                  <strong id="broker-kpi-version">Unknown</strong>
+                </article>
+              </div>
+            </div>
+
+            <div class="broker-kpi-group">
+              <div class="broker-kpi-group-title">Partitions</div>
+              <div class="broker-kpi-grid broker-kpi-grid--partitions">
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Online</span>
+                  <strong><span id="broker-kpi-online">0</span> of <span id="broker-kpi-online-total">0</span></strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">URP</span>
+                  <strong id="broker-kpi-urp">0</strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">In Sync Replicas</span>
+                  <strong><span id="broker-kpi-isr">0</span> of <span id="broker-kpi-isr-total">0</span></strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Out Of Sync Replicas</span>
+                  <strong id="broker-kpi-oosr">0</strong>
+                </article>
+              </div>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>Broker</th>
                   <th>Host</th>
                   <th>Port</th>
+                  <th>Role</th>
+                  <th>Endpoint</th>
                 </tr>
               </thead>
               <tbody id="brokers-body">
                 {% for broker in brokers %}
-                <tr>
-                  <td>{{ broker.id }}</td>
+                <tr class="broker-row" data-broker-id="{{ broker.id }}">
+                  <td><button class="broker-link" type="button" data-broker-id="{{ broker.id }}">broker-{{ broker.id }}{% if broker.id == cluster.controller_id %}<span class="controller-check" aria-label="active controller">&#10003;</span>{% endif %}</button></td>
                   <td>{{ broker.host }}</td>
                   <td>{{ broker.port }}</td>
+                  <td>{% if broker.id == cluster.controller_id %}<span class="role-pill">Controller<span class="controller-check" aria-label="active controller">&#10003;</span></span>{% else %}<span class="role-pill is-follower">Follower</span>{% endif %}</td>
+                  <td>{{ broker.host }}:{{ broker.port }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
+          </div>
+        </article>
+
+        <article class="panel" id="broker-details-panel" data-view="brokers">
+          <div class="panel-head">
+            <h2 id="broker-details-title">Broker Details</h2>
+          </div>
+          <div class="details-body">
+            <p class="details-empty" id="broker-details-empty">Select a broker to inspect endpoint and partition assignment stats.</p>
+            <div class="details-grid" id="broker-details-grid" hidden>
+              <div class="details-kv"><span>Broker</span><strong id="detail-broker-name">-</strong></div>
+              <div class="details-kv"><span>Role</span><strong id="detail-broker-role">-</strong></div>
+              <div class="details-kv"><span>Endpoint</span><strong id="detail-broker-endpoint">-</strong></div>
+              <div class="details-kv"><span>Leader Partitions</span><strong id="detail-broker-leaders">-</strong></div>
+              <div class="details-kv"><span>Replica Partitions</span><strong id="detail-broker-replicas">-</strong></div>
+              <div class="details-kv"><span>ISR Partitions</span><strong id="detail-broker-isr">-</strong></div>
+            </div>
           </div>
         </article>
 

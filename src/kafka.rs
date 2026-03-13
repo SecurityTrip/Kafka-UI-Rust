@@ -1,8 +1,10 @@
 use std::time::Duration;
 
 use rdkafka::{
+    admin::{AdminClient, AdminOptions, ResourceSpecifier},
     config::ClientConfig,
     consumer::{BaseConsumer, Consumer},
+    client::DefaultClientContext,
     error::KafkaError as RdkafkaError,
 };
 use thiserror::Error;
@@ -27,9 +29,66 @@ impl KafkaClient {
         let bootstrap_servers = self.bootstrap_servers.clone();
         let timeout = self.timeout;
 
-        tokio::task::spawn_blocking(move || fetch_snapshot_blocking(&bootstrap_servers, timeout))
+        let mut snapshot = tokio::task::spawn_blocking(move || fetch_snapshot_blocking(&bootstrap_servers, timeout))
             .await
-            .map_err(KafkaClientError::Join)?
+            .map_err(KafkaClientError::Join)??;
+
+        let mut broker_ids: Vec<i32> = snapshot.brokers.iter().map(|b| b.id).collect();
+        if !broker_ids.iter().any(|id| *id == snapshot.cluster.controller_id) {
+            broker_ids.insert(0, snapshot.cluster.controller_id);
+        }
+
+        let kafka_version = self
+            .fetch_inter_broker_protocol_version(&broker_ids)
+            .await
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        snapshot.cluster.kafka_version = kafka_version;
+        Ok(snapshot)
+    }
+
+    async fn fetch_inter_broker_protocol_version(&self, broker_ids: &[i32]) -> Option<String> {
+        let admin: AdminClient<DefaultClientContext> = ClientConfig::new()
+            .set("bootstrap.servers", &self.bootstrap_servers)
+            .create()
+            .ok()?;
+
+        for broker_id in broker_ids {
+            if *broker_id < 0 {
+                continue;
+            }
+
+            let spec = ResourceSpecifier::Broker(*broker_id);
+            let result = match admin.describe_configs([&spec], &AdminOptions::new()).await {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+
+            let config_resource = match result.into_iter().next() {
+                Some(Ok(res)) => res,
+                _ => continue,
+            };
+
+            let version = config_resource
+                .get("metadata.version")
+                .and_then(|entry| entry.value.clone())
+                .or_else(|| {
+                    config_resource
+                        .get("inter.broker.protocol.version")
+                        .and_then(|entry| entry.value.clone())
+                })
+                .or_else(|| {
+                    config_resource
+                        .get("log.message.format.version")
+                        .and_then(|entry| entry.value.clone())
+                });
+
+            if version.is_some() {
+                return version;
+            }
+        }
+
+        None
     }
 }
 
@@ -105,6 +164,7 @@ fn fetch_snapshot_blocking(
     let cluster = ClusterOverview {
         cluster_id: "unknown".to_string(),
         controller_id: metadata.orig_broker_id(),
+        kafka_version: "Unknown".to_string(),
         broker_count: brokers.len(),
         topic_count: topics.len(),
         consumer_group_count: groups.len(),

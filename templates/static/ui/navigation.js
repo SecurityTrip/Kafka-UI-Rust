@@ -1,15 +1,15 @@
 (function (window) {
   function sectionsForView(view) {
     if (view === "brokers") {
-      return { topics: false, details: false, brokers: true, groups: false };
+      return { topics: false, details: false, brokers: true, brokerDetails: true, groups: false };
     }
     if (view === "groups") {
-      return { topics: false, details: false, brokers: false, groups: true };
+      return { topics: false, details: false, brokers: false, brokerDetails: false, groups: true };
     }
     if (view === "overview") {
-      return { topics: true, details: false, brokers: true, groups: true };
+      return { topics: true, details: false, brokers: true, brokerDetails: false, groups: true };
     }
-    return { topics: true, details: true, brokers: false, groups: false };
+    return { topics: true, details: true, brokers: false, brokerDetails: false, groups: false };
   }
 
   function applyView(view) {
@@ -22,6 +22,7 @@
     refs.topicsPanel.classList.toggle("is-hidden", !layout.topics);
     refs.topicDetailsPanel.classList.toggle("is-hidden", !layout.details);
     refs.brokersPanel.classList.toggle("is-hidden", !layout.brokers);
+    refs.brokerDetailsPanel.classList.toggle("is-hidden", !layout.brokerDetails);
     refs.groupsPanel.classList.toggle("is-hidden", !layout.groups);
 
     refs.navItems.forEach(function (item) {

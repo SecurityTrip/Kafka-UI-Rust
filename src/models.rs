@@ -35,6 +35,7 @@ pub struct ConsumerGroup {
 pub struct ClusterOverview {
     pub cluster_id: String,
     pub controller_id: i32,
+    pub kafka_version: String,
     pub broker_count: usize,
     pub topic_count: usize,
     pub consumer_group_count: usize,

@@ -167,7 +167,9 @@ body {
 }
 
 #topics-panel,
-#topic-details-panel {
+#topic-details-panel,
+#brokers-panel,
+#broker-details-panel {
   grid-column: span 1;
 }
 
@@ -211,6 +213,60 @@ body {
 .panel-search:focus {
   outline: 2px solid #99f6e4;
   border-color: var(--accent);
+}
+
+.broker-kpis {
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid var(--panel-border);
+  background: #f8fafc;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 0.7rem;
+}
+
+.broker-kpi-group {
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 0.62rem;
+}
+
+.broker-kpi-group-title {
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.broker-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.broker-kpi-grid--partitions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.broker-kpi-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.45rem 0.5rem;
+}
+
+.broker-kpi-label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.broker-kpi-card strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.05rem;
+  color: var(--text);
 }
 
 .details-body {
@@ -304,6 +360,60 @@ tbody tr:hover {
   background: #f0fdfa;
 }
 
+.broker-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #0c4a6e;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.broker-link:hover {
+  text-decoration: underline;
+}
+
+.broker-row.is-selected {
+  background: #eff6ff;
+}
+
+.role-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.16rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid #bfdbfe;
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.role-pill.is-follower {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.controller-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-left: 0.34rem;
+  border-radius: 999px;
+  border: 1px solid #6ee7b7;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 0.72rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .state-pill {
   display: inline-block;
   border-radius: 999px;
@@ -336,6 +446,14 @@ tbody tr:hover {
 @media (max-width: 1200px) {
   .panels-grid {
     grid-template-columns: 1fr;
+  }
+
+  .broker-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .broker-kpi-grid--partitions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   #groups-panel {
@@ -379,6 +497,11 @@ tbody tr:hover {
   }
 
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .broker-kpi-grid,
+  .broker-kpi-grid--partitions {
     grid-template-columns: 1fr;
   }
 

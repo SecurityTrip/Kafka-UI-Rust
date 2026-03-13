@@ -13,6 +13,16 @@
     brokersBody: document.getElementById("brokers-body"),
     topicsBody: document.getElementById("topics-body"),
     groupsBody: document.getElementById("groups-body"),
+    brokersSearch: document.getElementById("brokers-search"),
+    brokerKpiCount: document.getElementById("broker-kpi-count"),
+    brokerKpiController: document.getElementById("broker-kpi-controller"),
+    brokerKpiVersion: document.getElementById("broker-kpi-version"),
+    brokerKpiOnline: document.getElementById("broker-kpi-online"),
+    brokerKpiOnlineTotal: document.getElementById("broker-kpi-online-total"),
+    brokerKpiUrp: document.getElementById("broker-kpi-urp"),
+    brokerKpiIsr: document.getElementById("broker-kpi-isr"),
+    brokerKpiIsrTotal: document.getElementById("broker-kpi-isr-total"),
+    brokerKpiOosr: document.getElementById("broker-kpi-oosr"),
     topicsSearch: document.getElementById("topics-search"),
     groupsSearch: document.getElementById("groups-search"),
     detailsEmpty: document.getElementById("topic-details-empty"),
@@ -23,11 +33,20 @@
     detailTopicReplication: document.getElementById("detail-topic-replication"),
     detailTopicInternal: document.getElementById("detail-topic-internal"),
     topicPartitionsBody: document.getElementById("topic-partitions-body"),
+    brokerDetailsEmpty: document.getElementById("broker-details-empty"),
+    brokerDetailsGrid: document.getElementById("broker-details-grid"),
+    detailBrokerName: document.getElementById("detail-broker-name"),
+    detailBrokerRole: document.getElementById("detail-broker-role"),
+    detailBrokerEndpoint: document.getElementById("detail-broker-endpoint"),
+    detailBrokerLeaders: document.getElementById("detail-broker-leaders"),
+    detailBrokerReplicas: document.getElementById("detail-broker-replicas"),
+    detailBrokerIsr: document.getElementById("detail-broker-isr"),
     navItems: document.querySelectorAll(".nav-item[data-view]"),
     overviewPanel: document.getElementById("overview-panel"),
     topicsPanel: document.getElementById("topics-panel"),
     topicDetailsPanel: document.getElementById("topic-details-panel"),
     brokersPanel: document.getElementById("brokers-panel"),
+    brokerDetailsPanel: document.getElementById("broker-details-panel"),
     groupsPanel: document.getElementById("groups-panel"),
   };
 
@@ -46,6 +65,16 @@
       refs.brokersBody &&
       refs.topicsBody &&
       refs.groupsBody &&
+      refs.brokersSearch &&
+      refs.brokerKpiCount &&
+      refs.brokerKpiController &&
+      refs.brokerKpiVersion &&
+      refs.brokerKpiOnline &&
+      refs.brokerKpiOnlineTotal &&
+      refs.brokerKpiUrp &&
+      refs.brokerKpiIsr &&
+      refs.brokerKpiIsrTotal &&
+      refs.brokerKpiOosr &&
       refs.topicsSearch &&
       refs.groupsSearch &&
       refs.detailsEmpty &&
@@ -56,10 +85,19 @@
       refs.detailTopicReplication &&
       refs.detailTopicInternal &&
       refs.topicPartitionsBody &&
+      refs.brokerDetailsEmpty &&
+      refs.brokerDetailsGrid &&
+      refs.detailBrokerName &&
+      refs.detailBrokerRole &&
+      refs.detailBrokerEndpoint &&
+      refs.detailBrokerLeaders &&
+      refs.detailBrokerReplicas &&
+      refs.detailBrokerIsr &&
       refs.overviewPanel &&
       refs.topicsPanel &&
       refs.topicDetailsPanel &&
       refs.brokersPanel &&
+      refs.brokerDetailsPanel &&
       refs.groupsPanel
     );
   }
