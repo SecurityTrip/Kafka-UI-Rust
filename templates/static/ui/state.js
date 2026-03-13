@@ -5,6 +5,7 @@
     selectedTopic: null,
     topicOverviewTopic: null,
     topicOverview: null,
+    topicOverviewByTopic: {},
     topicOverviewLoading: false,
     topicOverviewError: "",
     topicMessagesTopic: null,

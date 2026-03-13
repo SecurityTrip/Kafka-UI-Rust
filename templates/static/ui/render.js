@@ -108,6 +108,26 @@
     return String(message.partition) + ":" + String(message.offset);
   }
 
+  function estimateMessageCountFromMessages(messages) {
+    var byPartition = {};
+    (messages || []).forEach(function (message) {
+      var partition = String(message.partition);
+      var offset = Number(message.offset);
+      if (!isFinite(offset) || offset < 0) {
+        return;
+      }
+      if (byPartition[partition] === undefined || offset > byPartition[partition]) {
+        byPartition[partition] = offset;
+      }
+    });
+
+    var total = 0;
+    Object.keys(byPartition).forEach(function (partition) {
+      total += byPartition[partition] + 1;
+    });
+    return total;
+  }
+
   function textPreview(value) {
     if (value === null || value === undefined) {
       return "(null)";
@@ -313,6 +333,7 @@
       refs.topicMessageView.hidden = true;
       state.topicOverviewTopic = null;
       state.topicOverview = null;
+      state.topicOverviewByTopic = {};
       state.topicOverviewLoading = false;
       state.topicOverviewError = "";
       state.topicMessagesTopic = null;
@@ -369,7 +390,7 @@
       return;
     }
 
-    if (state.topicOverviewLoading) {
+    if (state.topicOverviewLoading && !state.topicOverview) {
       refs.topicOverviewStatus.hidden = false;
       refs.topicOverviewStatus.innerHTML =
         "<span class=\"inline-spinner\" aria-label=\"Loading topic overview\"></span> Loading topic overview...";
@@ -390,18 +411,17 @@
 
     if (state.topicOverviewError) {
       if (state.topicOverview) {
+        refs.topicOverviewStatus.hidden = true;
+        refs.topicOverviewStatus.textContent = "";
+      } else {
         refs.topicOverviewStatus.hidden = false;
         refs.topicOverviewStatus.textContent = state.topicOverviewError;
-        refs.topicOverviewGrid.hidden = false;
+        refs.topicOverviewGrid.hidden = true;
+        refs.topicConsumersEmpty.hidden = true;
+        refs.topicConsumersWrap.hidden = true;
+        refs.topicConsumersBody.innerHTML = "";
         return;
       }
-      refs.topicOverviewStatus.hidden = false;
-      refs.topicOverviewStatus.textContent = state.topicOverviewError;
-      refs.topicOverviewGrid.hidden = true;
-      refs.topicConsumersEmpty.hidden = true;
-      refs.topicConsumersWrap.hidden = true;
-      refs.topicConsumersBody.innerHTML = "";
-      return;
     }
 
     var overview = state.topicOverview;
@@ -418,11 +438,24 @@
     refs.topicOverviewStatus.hidden = true;
     refs.topicOverviewStatus.textContent = "";
     refs.topicOverviewGrid.hidden = false;
+    var snapshotMessageCount = null;
+    var topics = (state.latestSnapshot && state.latestSnapshot.topics) || [];
+    for (var i = 0; i < topics.length; i += 1) {
+      if (topics[i].name === state.selectedTopic) {
+        snapshotMessageCount = Number(topics[i].message_count);
+        break;
+      }
+    }
+    var effectiveMessageCount = Number(overview.message_count);
+    if (isFinite(snapshotMessageCount) && snapshotMessageCount >= 0) {
+      effectiveMessageCount = Math.max(effectiveMessageCount || 0, snapshotMessageCount);
+    }
+
     refs.topicOverviewType.textContent = String(overview.topic_type || "-");
     refs.topicOverviewIsr.textContent = formatInteger(overview.in_sync_replicas);
     refs.topicOverviewReplicas.textContent = formatInteger(overview.total_replicas);
     refs.topicOverviewUrp.textContent = formatInteger(overview.urp);
-    refs.topicOverviewMessages.textContent = formatInteger(overview.message_count);
+    refs.topicOverviewMessages.textContent = formatInteger(effectiveMessageCount);
     refs.topicOverviewCleanup.textContent = String(overview.cleanup_policy || "-");
     refs.topicOverviewSegmentSize.textContent = formatSize(overview.segment_size_bytes);
     refs.topicOverviewSegmentCount.textContent =
@@ -580,7 +613,7 @@
       renderTopicMessages();
     }
 
-    fetch("/api/topics/" + encodeURIComponent(topicName) + "/messages?limit=80")
+    fetch("/api/topics/" + encodeURIComponent(topicName) + "/messages?limit=50")
       .then(function (response) {
         if (!response.ok) {
           throw new Error("Unable to load topic messages");
@@ -604,6 +637,20 @@
         } else {
           state.selectedTopicMessageId = null;
         }
+
+        // Keep Topic Overview message counter fresh without waiting for heavy overview refresh.
+        var estimatedCount = estimateMessageCountFromMessages(state.topicMessages);
+        if (state.topicOverview && isFinite(estimatedCount) && estimatedCount > 0) {
+          state.topicOverview.message_count = Math.max(
+            Number(state.topicOverview.message_count) || 0,
+            estimatedCount
+          );
+          if (state.topicOverviewTopic) {
+            state.topicOverviewByTopic[state.topicOverviewTopic] = state.topicOverview;
+          }
+          renderTopicOverview();
+        }
+
         renderTopicMessages();
       })
       .catch(function () {
@@ -643,6 +690,7 @@
           return;
         }
         state.topicOverview = payload;
+        state.topicOverviewByTopic[topicName] = payload;
         state.topicOverviewLoading = false;
         state.topicOverviewError = "";
         renderTopicOverview();
@@ -670,7 +718,6 @@
     }
 
     loadTopicMessages(state.selectedTopic, force);
-    loadTopicOverview(state.selectedTopic, force);
   }
 
   function syncSelectedTopic() {
@@ -730,7 +777,7 @@
       state.topicMessages = [];
       state.topicMessagesError = "";
       state.selectedTopicMessageId = null;
-      state.topicOverview = null;
+      state.topicOverview = state.topicOverviewByTopic[activeTopic.name] || null;
       state.topicOverviewError = "";
       state.selectedPayloadTab = "value";
 
@@ -842,7 +889,7 @@
       if (!state.topicMessagesTopic) {
         return;
       }
-      refreshActiveTopicDetails(true);
+      loadTopicMessages(state.topicMessagesTopic, true);
     });
   }
 
@@ -1004,7 +1051,7 @@
     }
     window.KafkaUIState.topicDetailsRefreshTimer = setInterval(function () {
       refreshActiveTopicDetails(true);
-    }, 10000);
+    }, 1500);
 
     window.addEventListener("hashchange", function () {
       if ((window.location.hash || "").indexOf("#topics/") === 0) {
