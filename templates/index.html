@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Apache Kafka UI</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --border: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Noto Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%, #d1fae5 0, transparent 35%),
+        radial-gradient(circle at 90% 20%, #bfdbfe 0, transparent 28%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(1080px, 92vw);
+      margin: 2rem auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f766e, #155e75);
+      color: white;
+      border-radius: 16px;
+      padding: 1.4rem 1.6rem;
+      box-shadow: 0 12px 28px rgba(15, 118, 110, 0.25);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      letter-spacing: 0.03em;
+    }
+
+    .hero p {
+      margin: 0.5rem 0 0;
+      color: #d1fae5;
+    }
+
+    .actions {
+      margin-top: 0.9rem;
+    }
+
+    button {
+      border: 0;
+      background: #ffffff;
+      color: #0f766e;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 0.55rem 0.9rem;
+      cursor: pointer;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 6px 20px rgba(17, 24, 39, 0.07);
+    }
+
+    .card h2 {
+      margin: 0 0 0.8rem;
+      font-size: 1.1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.45rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <h1>Apache Kafka UI</h1>
+      <p>Minimal SSR dashboard written in Rust (Axum + Askama).</p>
+      <div class="actions">
+        <button onclick="window.location.reload()">Refresh Data</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Brokers ({{ brokers.len() }})</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Host</th>
+              <th>Port</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for broker in brokers %}
+            <tr>
+              <td>{{ broker.id }}</td>
+              <td>{{ broker.host }}</td>
+              <td>{{ broker.port }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Topics ({{ topics.len() }})</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Partitions</th>
+              <th>Replication</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for topic in topics %}
+            <tr>
+              <td>{{ topic.name }}</td>
+              <td>{{ topic.partitions }}</td>
+              <td>{{ topic.replication_factor }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
