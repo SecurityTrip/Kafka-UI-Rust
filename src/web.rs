@@ -1,10 +1,14 @@
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc, time::Duration};
 
+use async_stream::stream;
 use askama::Template;
 use axum::{
     Json, Router,
     extract::State,
-    response::{Html, IntoResponse},
+    response::{
+        Html, IntoResponse,
+        sse::{Event, KeepAlive, Sse},
+    },
     routing::get,
 };
 use tower_http::services::ServeDir;
@@ -31,6 +35,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(index))
         .route("/health", get(health))
+        .route("/api/stream", get(api_stream))
         .route("/api/snapshot", get(api_snapshot))
         .route("/api/cluster", get(api_cluster))
         .route("/api/topics", get(api_topics))
@@ -57,6 +62,40 @@ async fn health() -> Json<HealthResponse> {
         status: "ok",
         service: "apache-kafka-ui",
     })
+}
+
+async fn api_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let stream = stream! {
+        let mut interval = tokio::time::interval(Duration::from_secs(2));
+        loop {
+            interval.tick().await;
+
+            match state.kafka_client().fetch_snapshot().await {
+                Ok(snapshot) => {
+                    let payload = SnapshotResponse {
+                        cluster: snapshot.cluster,
+                        brokers: snapshot.brokers,
+                        topics: snapshot.topics,
+                        groups: snapshot.groups,
+                    };
+
+                    match serde_json::to_string(&payload) {
+                        Ok(json) => {
+                            yield Ok::<Event, Infallible>(Event::default().event("snapshot").data(json));
+                        }
+                        Err(error) => {
+                            yield Ok::<Event, Infallible>(Event::default().event("error").data(format!("serialization error: {error}")));
+                        }
+                    }
+                }
+                Err(error) => {
+                    yield Ok::<Event, Infallible>(Event::default().event("error").data(format!("kafka stream error: {error}")));
+                }
+            }
+        }
+    };
+
+    Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)).text("keep-alive"))
 }
 
 async fn api_snapshot(

@@ -1,5 +1,5 @@
 (function () {
-  var REFRESH_MS = 5000;
+  var RECONNECT_DELAY_MS = 2000;
   var refreshButton = document.getElementById("refresh-button");
   var liveStatus = document.getElementById("live-status");
   var bootstrapServers = document.getElementById("bootstrap-servers");
@@ -34,7 +34,8 @@
     return;
   }
 
-  var inFlight = false;
+  var eventSource = null;
+  var reconnectTimer = null;
 
   function escapeHtml(value) {
     return String(value)
@@ -105,16 +106,7 @@
       .join("");
   }
 
-  async function refreshData(manual) {
-    if (inFlight) {
-      return;
-    }
-
-    inFlight = true;
-    if (manual) {
-      setStatus("Refreshing...", false);
-    }
-
+  async function refreshDataFromHttp() {
     try {
       var response = await fetch("/api/snapshot", { cache: "no-store" });
       if (!response.ok) {
@@ -125,19 +117,51 @@
       renderSnapshot(snapshot);
 
       var updatedAt = new Date().toLocaleTimeString();
-      setStatus("Auto refresh every 5s | Last update " + updatedAt, false);
+      setStatus("Live stream fallback | Last update " + updatedAt, false);
     } catch (_error) {
-      setStatus("Auto refresh failed. Retrying...", true);
-    } finally {
-      inFlight = false;
+      setStatus("Snapshot request failed", true);
     }
   }
 
+  function connectStream() {
+    if (eventSource) {
+      eventSource.close();
+    }
+
+    setStatus("Connecting live stream...", false);
+    eventSource = new EventSource("/api/stream");
+
+    eventSource.addEventListener("open", function () {
+      setStatus("Live stream connected", false);
+    });
+
+    eventSource.addEventListener("snapshot", function (event) {
+      try {
+        var snapshot = JSON.parse(event.data);
+        renderSnapshot(snapshot);
+        var updatedAt = new Date().toLocaleTimeString();
+        setStatus("Live stream connected | Last update " + updatedAt, false);
+      } catch (_error) {
+        setStatus("Failed to parse live update", true);
+      }
+    });
+
+    eventSource.addEventListener("error", function () {
+      setStatus("Live stream disconnected, reconnecting...", true);
+      eventSource.close();
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      reconnectTimer = setTimeout(function () {
+        connectStream();
+      }, RECONNECT_DELAY_MS);
+    });
+  }
+
   refreshButton.addEventListener("click", function () {
-    refreshData(true);
+    setStatus("Manual refresh...", false);
+    refreshDataFromHttp();
   });
 
-  setInterval(function () {
-    refreshData(false);
-  }, REFRESH_MS);
+  connectStream();
 })();

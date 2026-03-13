@@ -14,10 +14,11 @@ This project is in early development. It already includes:
 ## Features
 
 - Fast Rust backend
-- SSR dashboard with live Kafka metadata and auto-refresh (5s)
+- SSR dashboard with true real-time updates via SSE
 - REST API endpoints:
   - `GET /health`
   - `GET /api/snapshot`
+  - `GET /api/stream` (SSE)
   - `GET /api/cluster`
   - `GET /api/topics`
   - `GET /api/brokers`
