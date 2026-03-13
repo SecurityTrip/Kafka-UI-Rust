@@ -33,6 +33,9 @@
 
   function resolveViewFromHash() {
     var hash = (window.location.hash || "").replace("#", "");
+    if (hash.indexOf("topics/") === 0) {
+      return "topics";
+    }
     if (hash === "brokers" || hash === "groups" || hash === "overview" || hash === "topics") {
       return hash;
     }

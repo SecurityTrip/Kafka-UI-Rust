@@ -4,7 +4,10 @@ use serde::Serialize;
 pub struct Topic {
     pub name: String,
     pub partitions: u32,
+    pub out_of_sync_replicas: u32,
     pub replication_factor: u16,
+    pub message_count: u64,
+    pub size_bytes: Option<u64>,
     pub is_internal: bool,
     pub partition_details: Vec<TopicPartition>,
 }

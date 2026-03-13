@@ -42,8 +42,39 @@
     return (
       String(topic.name).toLowerCase().indexOf(q) >= 0 ||
       String(topic.partitions).indexOf(q) >= 0 ||
-      String(topic.replication_factor).indexOf(q) >= 0
+      String(topic.replication_factor).indexOf(q) >= 0 ||
+      String(topic.out_of_sync_replicas || 0).indexOf(q) >= 0 ||
+      String(topic.message_count || 0).indexOf(q) >= 0
     );
+  }
+
+  function parseTopicFromHash() {
+    var hash = window.location.hash || "";
+    if (hash.indexOf("#topics/") !== 0) {
+      return "";
+    }
+    try {
+      return decodeURIComponent(hash.substring("#topics/".length));
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function formatSize(sizeBytes) {
+    if (sizeBytes === null || sizeBytes === undefined) {
+      return "-";
+    }
+    var value = Number(sizeBytes);
+    if (!isFinite(value) || value < 0) {
+      return "-";
+    }
+    if (value < 1024) {
+      return String(Math.round(value)) + " Bytes";
+    }
+    if (value < 1024 * 1024) {
+      return (value / 1024).toFixed(1) + " KB";
+    }
+    return (value / (1024 * 1024)).toFixed(1) + " MB";
   }
 
   function groupMatchesFilter(group) {
@@ -195,6 +226,11 @@
       return;
     }
 
+    var topicFromHash = parseTopicFromHash();
+    if (topicFromHash && topics.some(function (t) { return t.name === topicFromHash; })) {
+      state.selectedTopic = topicFromHash;
+    }
+
     if (!state.selectedTopic || !topics.some(function (t) { return t.name === state.selectedTopic; })) {
       state.selectedTopic = topics[0].name;
     }
@@ -276,6 +312,7 @@
       }
 
       window.KafkaUIState.selectedTopic = button.getAttribute("data-topic-name");
+      window.location.hash = "topics/" + encodeURIComponent(window.KafkaUIState.selectedTopic);
       rerender();
     });
   }
@@ -376,9 +413,13 @@
           "</button></td><td>" +
           escapeHtml(topic.partitions) +
           "</td><td>" +
+          escapeHtml(topic.out_of_sync_replicas || 0) +
+          "</td><td>" +
           escapeHtml(topic.replication_factor) +
           "</td><td>" +
-          (topic.is_internal ? "yes" : "no") +
+          escapeHtml(topic.message_count || 0) +
+          "</td><td>" +
+          escapeHtml(formatSize(topic.size_bytes)) +
           "</td></tr>"
         );
       })
@@ -420,6 +461,11 @@
     bindTopicSelection();
     bindBrokerSelection();
     bindFilters();
+    window.addEventListener("hashchange", function () {
+      if ((window.location.hash || "").indexOf("#topics/") === 0) {
+        rerender();
+      }
+    });
   }
 
   window.KafkaUIRender = {

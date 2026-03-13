@@ -1,4 +1,8 @@
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    process::Command,
+    time::Duration,
+};
 
 use rdkafka::{
     admin::{AdminClient, AdminOptions, ResourceSpecifier},
@@ -121,6 +125,11 @@ fn fetch_snapshot_blocking(
         })
         .collect();
 
+    let topic_names: Vec<String> = metadata.topics().iter().map(|t| t.name().to_string()).collect();
+    let broker_ids: Vec<i32> = brokers.iter().map(|b| b.id).collect();
+    let topic_sizes = fetch_topic_sizes_via_log_dirs(bootstrap_servers, &broker_ids, &topic_names)
+        .unwrap_or_default();
+
     let topics: Vec<Topic> = metadata
         .topics()
         .iter()
@@ -143,10 +152,32 @@ fn fetch_snapshot_blocking(
                 .max()
                 .unwrap_or(0) as u16;
 
+            let out_of_sync_replicas = partition_details
+                .iter()
+                .map(|partition| {
+                    let replicas = partition.replicas.len() as i32;
+                    let isr = partition.isr.len() as i32;
+                    (replicas - isr).max(0) as u32
+                })
+                .sum::<u32>();
+
+            let message_count = partition_details
+                .iter()
+                .map(|partition| {
+                    consumer
+                        .fetch_watermarks(topic.name(), partition.id, timeout)
+                        .map(|(low, high)| (high - low).max(0) as u64)
+                        .unwrap_or(0)
+                })
+                .sum::<u64>();
+
             Topic {
                 name: topic.name().to_string(),
                 partitions: topic.partitions().len() as u32,
+                out_of_sync_replicas,
                 replication_factor,
+                message_count,
+                size_bytes: topic_sizes.get(topic.name()).copied(),
                 is_internal: topic.name().starts_with("__"),
                 partition_details,
             }
@@ -195,6 +226,85 @@ fn build_consumer(bootstrap_servers: &str) -> Result<BaseConsumer, KafkaClientEr
 fn fetch_controller_id(consumer: &BaseConsumer, timeout: Duration) -> i32 {
     let timeout_ms = timeout.as_millis().min(i32::MAX as u128) as i32;
     unsafe { bindings::rd_kafka_controllerid(consumer.client().native_ptr(), timeout_ms) }
+}
+
+fn fetch_topic_sizes_via_log_dirs(
+    bootstrap_servers: &str,
+    broker_ids: &[i32],
+    topic_names: &[String],
+) -> Option<HashMap<String, u64>> {
+    if broker_ids.is_empty() || topic_names.is_empty() {
+        return Some(HashMap::new());
+    }
+
+    let broker_list = broker_ids
+        .iter()
+        .map(i32::to_string)
+        .collect::<Vec<String>>()
+        .join(",");
+    let topic_list = topic_names.join(",");
+
+    let output = ["kafka-log-dirs", "kafka-log-dirs.sh"]
+        .iter()
+        .find_map(|bin| {
+            Command::new(bin)
+                .arg("--bootstrap-server")
+                .arg(bootstrap_servers)
+                .arg("--describe")
+                .arg("--broker-list")
+                .arg(&broker_list)
+                .arg("--topic-list")
+                .arg(&topic_list)
+                .output()
+                .ok()
+        })?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8(output.stdout).ok()?;
+    let json_start = stdout.find('{')?;
+    let json_text = &stdout[json_start..];
+    let value: serde_json::Value = serde_json::from_str(json_text).ok()?;
+
+    let mut sizes: HashMap<String, u64> = HashMap::new();
+    let brokers = value.get("brokers")?.as_array()?;
+
+    for broker in brokers {
+        let log_dirs = broker
+            .get("logDirs")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+
+        for log_dir in log_dirs {
+            let partitions = log_dir
+                .get("partitions")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+
+            for partition in partitions {
+                let partition_name = partition
+                    .get("partition")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let Some((topic_name, _)) = partition_name.rsplit_once('-') else {
+                    continue;
+                };
+
+                let size = partition
+                    .get("size")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let current = sizes.entry(topic_name.to_string()).or_insert(0);
+                *current = current.saturating_add(size);
+            }
+        }
+    }
+
+    Some(sizes)
 }
 
 #[derive(Debug, Error)]

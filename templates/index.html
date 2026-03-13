@@ -58,10 +58,12 @@
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>Topic Name</th>
                   <th>Partitions</th>
-                  <th>Replication</th>
-                  <th>Internal</th>
+                  <th>Out of sync replicas</th>
+                  <th>Replication Factor</th>
+                  <th>Number of messages</th>
+                  <th>Size</th>
                 </tr>
               </thead>
               <tbody id="topics-body">
@@ -69,8 +71,10 @@
                 <tr class="topic-row" data-topic-name="{{ topic.name }}">
                   <td><button class="topic-link" type="button" data-topic-name="{{ topic.name }}">{{ topic.name }}</button></td>
                   <td>{{ topic.partitions }}</td>
+                  <td>{{ topic.out_of_sync_replicas }}</td>
                   <td>{{ topic.replication_factor }}</td>
-                  <td>{% if topic.is_internal %}yes{% else %}no{% endif %}</td>
+                  <td>{{ topic.message_count }}</td>
+                  <td>{% match topic.size_bytes %}{% when Some with (value) %}{{ value }} Bytes{% when None %}-{% endmatch %}</td>
                 </tr>
                 {% endfor %}
               </tbody>
