@@ -1,4 +1,4 @@
-FROM rust:1.86-bookworm AS builder
+FROM rust:1.94-bookworm AS builder
 
 WORKDIR /app
 
@@ -30,3 +30,4 @@ ENV RUST_LOG=info
 EXPOSE 3000
 
 CMD ["apache-kafka-ui"]
+

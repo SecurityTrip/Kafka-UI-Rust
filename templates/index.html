@@ -10,10 +10,11 @@
   <main class="container">
     <section class="hero">
       <h1>Apache Kafka UI</h1>
-      <p>Live cluster view from {{ cluster.bootstrap_servers }}.</p>
-      <p>Cluster ID: {{ cluster.cluster_id }} | Controller: {{ cluster.controller_id }}</p>
+      <p id="cluster-source">Live cluster view from <span id="bootstrap-servers">{{ cluster.bootstrap_servers }}</span>.</p>
+      <p id="cluster-meta">Cluster ID: <span id="cluster-id">{{ cluster.cluster_id }}</span> | Controller: <span id="controller-id">{{ cluster.controller_id }}</span></p>
       <div class="actions">
-        <button id="refresh-button" type="button">Refresh Data</button>
+        <button id="refresh-button" type="button">Refresh now</button>
+        <span id="live-status" class="live-status">Auto refresh every 5s</span>
       </div>
     </section>
 
@@ -24,22 +25,22 @@
           <tbody>
             <tr>
               <th>Brokers</th>
-              <td>{{ cluster.broker_count }}</td>
+              <td id="broker-count">{{ cluster.broker_count }}</td>
             </tr>
             <tr>
               <th>Topics</th>
-              <td>{{ cluster.topic_count }}</td>
+              <td id="topic-count">{{ cluster.topic_count }}</td>
             </tr>
             <tr>
               <th>Consumer Groups</th>
-              <td>{{ cluster.consumer_group_count }}</td>
+              <td id="group-count">{{ cluster.consumer_group_count }}</td>
             </tr>
           </tbody>
         </table>
       </article>
 
       <article class="card">
-        <h2>Brokers ({{ brokers.len() }})</h2>
+        <h2 id="brokers-title">Brokers ({{ brokers.len() }})</h2>
         <table>
           <thead>
             <tr>
@@ -48,7 +49,7 @@
               <th>Port</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="brokers-body">
             {% for broker in brokers %}
             <tr>
               <td>{{ broker.id }}</td>
@@ -61,7 +62,7 @@
       </article>
 
       <article class="card">
-        <h2>Topics ({{ topics.len() }})</h2>
+        <h2 id="topics-title">Topics ({{ topics.len() }})</h2>
         <table>
           <thead>
             <tr>
@@ -71,7 +72,7 @@
               <th>Internal</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="topics-body">
             {% for topic in topics %}
             <tr>
               <td>{{ topic.name }}</td>
@@ -85,7 +86,7 @@
       </article>
 
       <article class="card">
-        <h2>Consumer Groups ({{ groups.len() }})</h2>
+        <h2 id="groups-title">Consumer Groups ({{ groups.len() }})</h2>
         <table>
           <thead>
             <tr>
@@ -94,7 +95,7 @@
               <th>Members</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="groups-body">
             {% for group in groups %}
             <tr>
               <td>{{ group.name }}</td>

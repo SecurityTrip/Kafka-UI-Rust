@@ -11,7 +11,10 @@ use tower_http::services::ServeDir;
 
 use crate::{
     error::AppError,
-    models::{Broker, ClusterOverview, ConsumerGroup, HealthResponse, ListResponse, Topic},
+    models::{
+        Broker, ClusterOverview, ConsumerGroup, HealthResponse, ListResponse, SnapshotResponse,
+        Topic,
+    },
     state::AppState,
 };
 
@@ -28,6 +31,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(index))
         .route("/health", get(health))
+        .route("/api/snapshot", get(api_snapshot))
         .route("/api/cluster", get(api_cluster))
         .route("/api/topics", get(api_topics))
         .route("/api/brokers", get(api_brokers))
@@ -53,6 +57,18 @@ async fn health() -> Json<HealthResponse> {
         status: "ok",
         service: "apache-kafka-ui",
     })
+}
+
+async fn api_snapshot(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<SnapshotResponse>, AppError> {
+    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    Ok(Json(SnapshotResponse {
+        cluster: snapshot.cluster,
+        brokers: snapshot.brokers,
+        topics: snapshot.topics,
+        groups: snapshot.groups,
+    }))
 }
 
 async fn api_cluster(

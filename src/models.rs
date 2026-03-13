@@ -33,6 +33,14 @@ pub struct ClusterOverview {
 }
 
 #[derive(Debug, Serialize)]
+pub struct SnapshotResponse {
+    pub cluster: ClusterOverview,
+    pub brokers: Vec<Broker>,
+    pub topics: Vec<Topic>,
+    pub groups: Vec<ConsumerGroup>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub status: &'static str,
     pub service: &'static str,

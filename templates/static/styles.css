@@ -47,7 +47,21 @@ body {
 }
 
 .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
   margin-top: 0.9rem;
+}
+
+.live-status {
+  font-size: 0.9rem;
+  color: #d1fae5;
+  opacity: 0.95;
+}
+
+.live-status.is-error {
+  color: #fecaca;
 }
 
 button {
