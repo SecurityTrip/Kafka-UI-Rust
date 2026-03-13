@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
     process::Command,
-    time::Duration,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
 };
 
 use rdkafka::{
@@ -11,13 +12,14 @@ use rdkafka::{
     consumer::{BaseConsumer, Consumer},
     client::DefaultClientContext,
     error::KafkaError as RdkafkaError,
-    message::Message,
+    message::{Headers, Message},
     topic_partition_list::{Offset, TopicPartitionList},
 };
 use thiserror::Error;
 
 use crate::models::{
     Broker, ClusterOverview, ConsumerGroup, Topic, TopicConsumer, TopicMessage,
+    TopicMessageHeader,
     TopicOverviewResponse, TopicPartition,
 };
 
@@ -25,6 +27,19 @@ use crate::models::{
 pub struct KafkaClient {
     bootstrap_servers: String,
     timeout: Duration,
+}
+
+const TOPIC_OVERVIEW_CACHE_TTL: Duration = Duration::from_secs(15);
+
+#[derive(Debug, Clone)]
+struct CachedOverview {
+    updated_at: Instant,
+    overview: TopicOverviewResponse,
+}
+
+fn topic_overview_cache() -> &'static Mutex<HashMap<String, CachedOverview>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, CachedOverview>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 impl KafkaClient {
@@ -123,12 +138,33 @@ impl KafkaClient {
     ) -> Result<TopicOverviewResponse, KafkaClientError> {
         let bootstrap_servers = self.bootstrap_servers.clone();
         let timeout = self.timeout;
+        let cache_key = format!("{}::{}", bootstrap_servers, topic);
 
-        tokio::task::spawn_blocking(move || {
+        if let Ok(cache) = topic_overview_cache().lock() {
+            if let Some(entry) = cache.get(&cache_key) {
+                if entry.updated_at.elapsed() < TOPIC_OVERVIEW_CACHE_TTL {
+                    return Ok(entry.overview.clone());
+                }
+            }
+        }
+
+        let overview = tokio::task::spawn_blocking(move || {
             fetch_topic_overview_blocking(&bootstrap_servers, timeout, &topic)
         })
         .await
-        .map_err(KafkaClientError::Join)?
+        .map_err(KafkaClientError::Join)??;
+
+        if let Ok(mut cache) = topic_overview_cache().lock() {
+            cache.insert(
+                cache_key,
+                CachedOverview {
+                    updated_at: Instant::now(),
+                    overview: overview.clone(),
+                },
+            );
+        }
+
+        Ok(overview)
     }
 }
 
@@ -292,18 +328,33 @@ fn fetch_topic_messages_blocking(
 
     let mut messages: Vec<TopicMessage> = Vec::new();
     let mut idle_polls = 0usize;
-    while messages.len() < limit && idle_polls < 8 {
-        match consumer.poll(Duration::from_millis(120)) {
+    while messages.len() < limit && idle_polls < 4 {
+        match consumer.poll(Duration::from_millis(70)) {
             Some(Ok(message)) => {
                 idle_polls = 0;
                 let key = message.key().map(|v| String::from_utf8_lossy(v).to_string());
                 let value = message
                     .payload()
                     .map(|v| String::from_utf8_lossy(v).to_string());
+                let headers = message
+                    .headers()
+                    .map(|items| {
+                        items
+                            .iter()
+                            .map(|header| TopicMessageHeader {
+                                key: header.key.to_string(),
+                                value: header
+                                    .value
+                                    .map(|raw| String::from_utf8_lossy(raw).to_string()),
+                            })
+                            .collect::<Vec<TopicMessageHeader>>()
+                    })
+                    .unwrap_or_default();
                 let topic_message = TopicMessage {
                     partition: message.partition(),
                     offset: message.offset(),
                     timestamp_ms: message.timestamp().to_millis(),
+                    headers,
                     key_size: message.key().map(|v| v.len()).unwrap_or(0),
                     value_size: message.payload().map(|v| v.len()).unwrap_or(0),
                     key,
@@ -420,7 +471,7 @@ fn fetch_topic_overview_blocking(
     let consumers = fetch_topic_consumers_via_cli(bootstrap_servers, topic, &group_states);
 
     let (cleanup_policy, segment_size_bytes) =
-        fetch_topic_configs(bootstrap_servers, topic).unwrap_or_else(|| ("-".to_string(), None));
+        fetch_topic_configs(bootstrap_servers, topic).unwrap_or_else(|| ("delete".to_string(), None));
 
     let size_bytes = topic_sizes.get(topic).copied();
     let segment_count = match (size_bytes, segment_size_bytes) {
@@ -471,13 +522,17 @@ fn fetch_topic_configs(bootstrap_servers: &str, topic: &str) -> Option<(String, 
     }
 
     let text = String::from_utf8_lossy(&output.stdout);
-    let mut cleanup_policy = "-".to_string();
+    let mut cleanup_policy = "delete".to_string();
     let mut segment_size_bytes = None;
 
     for line in text.lines() {
         if let Some(pos) = line.find("cleanup.policy=") {
             let tail = &line[(pos + "cleanup.policy=".len())..];
-            cleanup_policy = tail.split_whitespace().next().unwrap_or("-").to_string();
+            cleanup_policy = tail
+                .split_whitespace()
+                .next()
+                .unwrap_or("delete")
+                .to_string();
         }
         if let Some(pos) = line.find("segment.bytes=") {
             let tail = &line[(pos + "segment.bytes=".len())..];

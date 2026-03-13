@@ -119,17 +119,58 @@
     return text.slice(0, 56) + "...";
   }
 
-  function formatMessagePayload(value) {
+  function parseMaybeJson(value) {
     if (value === null || value === undefined) {
-      return "null";
+      return null;
     }
 
     var text = String(value);
     try {
-      return JSON.stringify(JSON.parse(text), null, 2);
+      return JSON.parse(text);
     } catch (_e) {
       return text;
     }
+  }
+
+  function normalizePayloadTab(tab) {
+    if (tab === "key" || tab === "headers" || tab === "value") {
+      return tab;
+    }
+    return "value";
+  }
+
+  function formatMessagePayloadByTab(message, tab) {
+    if (!message) {
+      return "null";
+    }
+
+    var normalizedTab = normalizePayloadTab(tab);
+
+    if (normalizedTab === "key") {
+      return JSON.stringify(parseMaybeJson(message.key), null, 2);
+    }
+
+    if (normalizedTab === "headers") {
+      var headers = (message.headers || []).map(function (header) {
+        return {
+          key: header.key,
+          value: parseMaybeJson(header.value),
+        };
+      });
+      return JSON.stringify(headers, null, 2);
+    }
+
+    return JSON.stringify(parseMaybeJson(message.value), null, 2);
+  }
+
+  function renderPayloadTabs() {
+    var refs = window.KafkaUIDom.refs;
+    var state = window.KafkaUIState;
+    var activeTab = normalizePayloadTab(state.selectedPayloadTab);
+    refs.payloadTabButtons.forEach(function (button) {
+      var tab = button.getAttribute("data-payload-tab");
+      button.classList.toggle("is-active", tab === activeTab);
+    });
   }
 
   function highlightJson(jsonText) {
@@ -277,6 +318,7 @@
       state.topicMessagesTopic = null;
       state.topicMessages = [];
       state.selectedTopicMessageId = null;
+      state.selectedPayloadTab = "value";
       state.topicMessagesLoading = false;
       state.topicMessagesError = "";
       return;
@@ -328,14 +370,18 @@
     }
 
     if (state.topicOverviewLoading) {
-      if (state.topicOverview) {
-        refs.topicOverviewStatus.hidden = true;
-        refs.topicOverviewGrid.hidden = false;
-        return;
-      }
       refs.topicOverviewStatus.hidden = false;
-      refs.topicOverviewStatus.textContent = "Loading topic overview...";
-      refs.topicOverviewGrid.hidden = true;
+      refs.topicOverviewStatus.innerHTML =
+        "<span class=\"inline-spinner\" aria-label=\"Loading topic overview\"></span> Loading topic overview...";
+      refs.topicOverviewGrid.hidden = false;
+      refs.topicOverviewType.textContent = "-";
+      refs.topicOverviewIsr.textContent = "-";
+      refs.topicOverviewReplicas.textContent = "-";
+      refs.topicOverviewUrp.textContent = "-";
+      refs.topicOverviewMessages.textContent = "-";
+      refs.topicOverviewCleanup.textContent = "-";
+      refs.topicOverviewSegmentSize.textContent = "-";
+      refs.topicOverviewSegmentCount.textContent = "-";
       refs.topicConsumersEmpty.hidden = true;
       refs.topicConsumersWrap.hidden = true;
       refs.topicConsumersBody.innerHTML = "";
@@ -370,6 +416,7 @@
     }
 
     refs.topicOverviewStatus.hidden = true;
+    refs.topicOverviewStatus.textContent = "";
     refs.topicOverviewGrid.hidden = false;
     refs.topicOverviewType.textContent = String(overview.topic_type || "-");
     refs.topicOverviewIsr.textContent = formatInteger(overview.in_sync_replicas);
@@ -511,11 +558,17 @@
       selected.offset +
       " | Timestamp " +
       formatTimestamp(selected.timestamp_ms);
-    refs.topicMessagePayload.innerHTML = highlightJson(formatMessagePayload(selected.value));
+    renderPayloadTabs();
+    refs.topicMessagePayload.innerHTML = highlightJson(
+      formatMessagePayloadByTab(selected, state.selectedPayloadTab)
+    );
   }
 
   function loadTopicMessages(topicName, force) {
     var state = window.KafkaUIState;
+    if (state.topicMessagesLoading && state.topicMessagesTopic === topicName) {
+      return;
+    }
     if (!force && state.topicMessagesTopic === topicName && state.topicMessages.length) {
       return;
     }
@@ -565,6 +618,9 @@
 
   function loadTopicOverview(topicName, force) {
     var state = window.KafkaUIState;
+    if (state.topicOverviewLoading && state.topicOverviewTopic === topicName) {
+      return;
+    }
     if (!force && state.topicOverviewTopic === topicName && state.topicOverview) {
       return;
     }
@@ -662,18 +718,27 @@
       }
     }
 
-    renderTopicDetails(activeTopic);
-
     if (!activeTopic) {
+      renderTopicDetails(null);
       return;
     }
 
-    if (state.topicMessagesTopic !== activeTopic.name) {
+    var topicChanged = state.topicMessagesTopic !== activeTopic.name;
+    if (topicChanged) {
       state.topicMessagesTopic = activeTopic.name;
       state.topicOverviewTopic = activeTopic.name;
+      state.topicMessages = [];
+      state.topicMessagesError = "";
+      state.selectedTopicMessageId = null;
+      state.topicOverview = null;
+      state.topicOverviewError = "";
+      state.selectedPayloadTab = "value";
+
       loadTopicMessages(activeTopic.name, true);
       loadTopicOverview(activeTopic.name, true);
     }
+
+    renderTopicDetails(activeTopic);
   }
 
   function renderBrokerDetails(broker, stats, controllerId) {
@@ -785,6 +850,17 @@
     var refs = window.KafkaUIDom.refs;
     refs.topicDetailsBack.addEventListener("click", function () {
       window.location.hash = "topics";
+    });
+  }
+
+  function bindPayloadTabs() {
+    var refs = window.KafkaUIDom.refs;
+    refs.payloadTabButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var state = window.KafkaUIState;
+        state.selectedPayloadTab = normalizePayloadTab(button.getAttribute("data-payload-tab"));
+        renderTopicMessages();
+      });
     });
   }
 
@@ -920,6 +996,7 @@
     bindBrokerSelection();
     bindTopicMessages();
     bindTopicDetailsBack();
+    bindPayloadTabs();
     bindFilters();
 
     if (window.KafkaUIState.topicDetailsRefreshTimer) {
@@ -927,7 +1004,7 @@
     }
     window.KafkaUIState.topicDetailsRefreshTimer = setInterval(function () {
       refreshActiveTopicDetails(true);
-    }, 5000);
+    }, 10000);
 
     window.addEventListener("hashchange", function () {
       if ((window.location.hash || "").indexOf("#topics/") === 0) {

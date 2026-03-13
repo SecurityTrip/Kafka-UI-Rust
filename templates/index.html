@@ -169,10 +169,17 @@
             </div>
 
             <div class="message-view" id="topic-message-view" hidden>
-              <div class="message-view-meta" id="topic-message-meta">Select a message to inspect key/value payload.</div>
+              <div class="message-view-meta" id="topic-message-meta">Select a message to inspect key, value, and headers.</div>
               <div class="message-view-grid message-view-grid--single">
                 <div class="message-block">
-                  <h4>Payload</h4>
+                  <h4>
+                    <span>Payload</span>
+                    <span class="payload-tabs">
+                      <button type="button" class="payload-tab" data-payload-tab="key">Key</button>
+                      <button type="button" class="payload-tab is-active" data-payload-tab="value">Value</button>
+                      <button type="button" class="payload-tab" data-payload-tab="headers">Headers</button>
+                    </span>
+                  </h4>
                   <pre id="topic-message-payload"></pre>
                 </div>
               </div>

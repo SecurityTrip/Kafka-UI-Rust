@@ -10,6 +10,7 @@
     topicMessagesTopic: null,
     topicMessages: [],
     selectedTopicMessageId: null,
+    selectedPayloadTab: "value",
     topicMessagesLoading: false,
     topicMessagesError: "",
     topicDetailsRefreshTimer: null,

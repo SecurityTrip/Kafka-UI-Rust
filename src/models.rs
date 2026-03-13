@@ -21,12 +21,19 @@ pub struct TopicPartition {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct TopicMessageHeader {
+    pub key: String,
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct TopicMessage {
     pub partition: i32,
     pub offset: i64,
     pub timestamp_ms: Option<i64>,
     pub key: Option<String>,
     pub value: Option<String>,
+    pub headers: Vec<TopicMessageHeader>,
     pub key_size: usize,
     pub value_size: usize,
 }
