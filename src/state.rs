@@ -1,46 +1,16 @@
-use crate::models::{Broker, Topic};
+use crate::kafka::KafkaClient;
 
 #[derive(Debug)]
 pub struct AppState {
-    topics: Vec<Topic>,
-    brokers: Vec<Broker>,
+    kafka_client: KafkaClient,
 }
 
 impl AppState {
-    pub fn seeded() -> Self {
-        Self {
-            topics: vec![
-                Topic {
-                    name: "payments.events".to_string(),
-                    partitions: 12,
-                    replication_factor: 3,
-                },
-                Topic {
-                    name: "orders.v1".to_string(),
-                    partitions: 8,
-                    replication_factor: 3,
-                },
-            ],
-            brokers: vec![
-                Broker {
-                    id: 1,
-                    host: "kafka-1.local".to_string(),
-                    port: 9092,
-                },
-                Broker {
-                    id: 2,
-                    host: "kafka-2.local".to_string(),
-                    port: 9092,
-                },
-            ],
-        }
+    pub fn new(kafka_client: KafkaClient) -> Self {
+        Self { kafka_client }
     }
 
-    pub fn topics(&self) -> &[Topic] {
-        &self.topics
-    }
-
-    pub fn brokers(&self) -> &[Broker] {
-        &self.brokers
+    pub fn kafka_client(&self) -> &KafkaClient {
+        &self.kafka_client
     }
 }

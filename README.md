@@ -8,17 +8,19 @@ This project is in early development. It already includes:
 
 - Axum-based HTTP server
 - Server-side rendered HTML with Askama
-- JSON API endpoints for topics and brokers
+- JSON API endpoints backed by a live Kafka cluster
 - Docker and Docker Compose setup for local development
 
 ## Features
 
 - Fast Rust backend
-- Simple SSR dashboard
+- SSR dashboard with live Kafka metadata
 - REST API endpoints:
   - `GET /health`
+  - `GET /api/cluster`
   - `GET /api/topics`
   - `GET /api/brokers`
+  - `GET /api/groups`
 
 ## Tech stack
 
@@ -42,6 +44,8 @@ Open http://127.0.0.1:3000
 
 - `APP_HOST` (default: `127.0.0.1`)
 - `APP_PORT` (default: `3000`)
+- `KAFKA_BOOTSTRAP_SERVERS` (default: `localhost:9092`)
+- `KAFKA_TIMEOUT_MS` (default: `5000`)
 - `RUST_LOG` (default: `info`)
 
 ### Docker

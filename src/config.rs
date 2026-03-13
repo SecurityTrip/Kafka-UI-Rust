@@ -6,6 +6,8 @@ use thiserror::Error;
 pub struct AppConfig {
     pub host: IpAddr,
     pub port: u16,
+    pub kafka_bootstrap_servers: String,
+    pub kafka_timeout_ms: u64,
 }
 
 impl AppConfig {
@@ -24,7 +26,22 @@ impl AppConfig {
             Err(_) => 3000,
         };
 
-        Ok(Self { host, port })
+        let kafka_bootstrap_servers =
+            env::var("KAFKA_BOOTSTRAP_SERVERS").unwrap_or_else(|_| "localhost:9092".to_string());
+
+        let kafka_timeout_ms = match env::var("KAFKA_TIMEOUT_MS") {
+            Ok(value) => value
+                .parse::<u64>()
+                .map_err(|_| ConfigError::InvalidKafkaTimeout(value))?,
+            Err(_) => 5_000,
+        };
+
+        Ok(Self {
+            host,
+            port,
+            kafka_bootstrap_servers,
+            kafka_timeout_ms,
+        })
     }
 }
 
@@ -34,4 +51,6 @@ pub enum ConfigError {
     InvalidHost(String),
     #[error("invalid APP_PORT value: {0}")]
     InvalidPort(String),
+    #[error("invalid KAFKA_TIMEOUT_MS value: {0}")]
+    InvalidKafkaTimeout(String),
 }

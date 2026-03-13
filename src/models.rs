@@ -5,6 +5,7 @@ pub struct Topic {
     pub name: String,
     pub partitions: u32,
     pub replication_factor: u16,
+    pub is_internal: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -12,6 +13,23 @@ pub struct Broker {
     pub id: i32,
     pub host: String,
     pub port: u16,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ConsumerGroup {
+    pub name: String,
+    pub state: String,
+    pub members: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ClusterOverview {
+    pub cluster_id: String,
+    pub controller_id: i32,
+    pub broker_count: usize,
+    pub topic_count: usize,
+    pub consumer_group_count: usize,
+    pub bootstrap_servers: String,
 }
 
 #[derive(Debug, Serialize)]

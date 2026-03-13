@@ -5,10 +5,14 @@ use axum::{
 };
 use thiserror::Error;
 
+use crate::kafka::KafkaClientError;
+
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("template rendering failed")]
     Template(#[from] AskamaError),
+    #[error("kafka request failed: {0}")]
+    Kafka(#[from] KafkaClientError),
 }
 
 impl IntoResponse for AppError {

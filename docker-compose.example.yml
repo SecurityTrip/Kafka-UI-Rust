@@ -1,7 +1,6 @@
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.8.0
-    container_name: akui-zookeeper
     restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -11,7 +10,6 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.8.0
-    container_name: akui-kafka
     restart: unless-stopped
     depends_on:
       - zookeeper
@@ -28,12 +26,10 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: akui-app
     restart: unless-stopped
     depends_on:
       - kafka
@@ -42,5 +38,6 @@ services:
       APP_PORT: 3000
       RUST_LOG: info
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TIMEOUT_MS: 5000
     ports:
       - "3000:3000"

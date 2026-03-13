@@ -10,13 +10,34 @@
   <main class="container">
     <section class="hero">
       <h1>Apache Kafka UI</h1>
-      <p>Minimal SSR dashboard written in Rust (Axum + Askama).</p>
+      <p>Live cluster view from {{ cluster.bootstrap_servers }}.</p>
+      <p>Cluster ID: {{ cluster.cluster_id }} | Controller: {{ cluster.controller_id }}</p>
       <div class="actions">
         <button id="refresh-button" type="button">Refresh Data</button>
       </div>
     </section>
 
     <section class="grid">
+      <article class="card">
+        <h2>Cluster Overview</h2>
+        <table>
+          <tbody>
+            <tr>
+              <th>Brokers</th>
+              <td>{{ cluster.broker_count }}</td>
+            </tr>
+            <tr>
+              <th>Topics</th>
+              <td>{{ cluster.topic_count }}</td>
+            </tr>
+            <tr>
+              <th>Consumer Groups</th>
+              <td>{{ cluster.consumer_group_count }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
       <article class="card">
         <h2>Brokers ({{ brokers.len() }})</h2>
         <table>
@@ -47,6 +68,7 @@
               <th>Name</th>
               <th>Partitions</th>
               <th>Replication</th>
+              <th>Internal</th>
             </tr>
           </thead>
           <tbody>
@@ -55,6 +77,29 @@
               <td>{{ topic.name }}</td>
               <td>{{ topic.partitions }}</td>
               <td>{{ topic.replication_factor }}</td>
+              <td>{{ topic.is_internal }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Consumer Groups ({{ groups.len() }})</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>State</th>
+              <th>Members</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for group in groups %}
+            <tr>
+              <td>{{ group.name }}</td>
+              <td>{{ group.state }}</td>
+              <td>{{ group.members }}</td>
             </tr>
             {% endfor %}
           </tbody>
