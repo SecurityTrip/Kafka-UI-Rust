@@ -12,8 +12,10 @@ use rdkafka::{
     consumer::{BaseConsumer, Consumer},
     client::DefaultClientContext,
     error::KafkaError as RdkafkaError,
-    message::{Headers, Message},
+    message::{Header, Headers, Message, OwnedHeaders},
+    producer::{FutureProducer, FutureRecord},
     topic_partition_list::{Offset, TopicPartitionList},
+    util::Timeout,
 };
 use thiserror::Error;
 
@@ -165,6 +167,39 @@ impl KafkaClient {
         }
 
         Ok(overview)
+    }
+
+    pub async fn produce_topic_message(
+        &self,
+        topic: String,
+        key: Option<String>,
+        value: String,
+        headers: Vec<TopicMessageHeader>,
+    ) -> Result<(), KafkaClientError> {
+        let producer: FutureProducer = ClientConfig::new()
+            .set("bootstrap.servers", &self.bootstrap_servers)
+            .create()?;
+
+        let mut record = FutureRecord::to(&topic).payload(&value);
+        if let Some(ref k) = key {
+            record = record.key(k);
+        }
+
+        if !headers.is_empty() {
+            let mut owned_headers = OwnedHeaders::new_with_capacity(headers.len());
+            for header in &headers {
+                owned_headers = owned_headers.insert(Header {
+                    key: &header.key,
+                    value: header.value.as_deref(),
+                });
+            }
+            record = record.headers(owned_headers);
+        }
+
+        match producer.send(record, Timeout::After(self.timeout)).await {
+            Ok(_) => Ok(()),
+            Err((error, _)) => Err(KafkaClientError::Produce(error.to_string())),
+        }
     }
 }
 
@@ -720,4 +755,6 @@ pub enum KafkaClientError {
     Kafka(#[from] RdkafkaError),
     #[error("internal task join failure: {0}")]
     Join(#[from] tokio::task::JoinError),
+    #[error("kafka produce failed: {0}")]
+    Produce(String),
 }

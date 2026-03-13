@@ -292,6 +292,30 @@ body {
   padding: 0.8rem 0.9rem;
 }
 
+.topic-details-actions {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--panel-border);
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.topic-breadcrumb-link {
+  border: 0;
+  background: transparent;
+  color: #0f766e;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+.topic-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
 .details-empty {
   margin: 0;
   color: var(--muted);
@@ -366,6 +390,81 @@ body {
 
 .panel-action:hover {
   background: #f8fafc;
+}
+
+.panel-action-primary {
+  background: #0f766e;
+  color: #f8fafc;
+  border-color: #0f766e;
+}
+
+.panel-action-primary:hover {
+  background: #115e59;
+  border-color: #115e59;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 30;
+}
+
+.modal-card {
+  width: min(680px, 100%);
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(2, 6, 23, 0.22);
+}
+
+.modal-body {
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.modal-field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.modal-field label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.modal-field input,
+.modal-field textarea {
+  width: 100%;
+  border: 1px solid #d4dde7;
+  border-radius: 8px;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.86rem;
+  color: var(--text);
+  background: #ffffff;
+  font-family: "Segoe UI", "Noto Sans", sans-serif;
+}
+
+.modal-field textarea {
+  resize: vertical;
+}
+
+.modal-field input:focus,
+.modal-field textarea:focus {
+  outline: 2px solid #99f6e4;
+  border-color: var(--accent);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .topic-message-row.is-selected {
@@ -657,6 +756,11 @@ tbody tr:hover {
     align-items: flex-start;
   }
 
+  .topic-details-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .panel-search {
     max-width: 100%;
     width: 100%;
@@ -677,5 +781,18 @@ tbody tr:hover {
 
   .details-grid {
     grid-template-columns: 1fr;
+  }
+
+  .modal-card {
+    width: 100%;
+  }
+
+  .modal-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .modal-actions .panel-action {
+    flex: 1;
   }
 }

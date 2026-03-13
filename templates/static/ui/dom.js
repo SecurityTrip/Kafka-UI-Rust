@@ -26,9 +26,12 @@
     topicsSearch: document.getElementById("topics-search"),
     groupsSearch: document.getElementById("groups-search"),
     topicMessagesPanel: document.getElementById("topic-messages-panel"),
+    topicDetailsActions: document.getElementById("topic-details-actions"),
+    topicBreadcrumbLink: document.getElementById("topic-breadcrumb-link"),
+    topicBreadcrumbPath: document.getElementById("topic-breadcrumb-path"),
+    topicProduceOpen: document.getElementById("topic-produce-open"),
     detailsEmpty: document.getElementById("topic-details-empty"),
     detailsGrid: document.getElementById("topic-details-grid"),
-    topicDetailsBack: document.getElementById("topic-details-back"),
     partitionsWrap: document.getElementById("topic-partitions-wrap"),
     detailTopicName: document.getElementById("detail-topic-name"),
     detailTopicPartitions: document.getElementById("detail-topic-partitions"),
@@ -50,7 +53,6 @@
     topicConsumersWrap: document.getElementById("topic-consumers-wrap"),
     topicConsumersBody: document.getElementById("topic-consumers-body"),
     topicPartitionsBody: document.getElementById("topic-partitions-body"),
-    topicMessagesReload: document.getElementById("topic-messages-reload"),
     topicMessagesStatus: document.getElementById("topic-messages-status"),
     topicMessagesWrap: document.getElementById("topic-messages-wrap"),
     topicMessagesBody: document.getElementById("topic-messages-body"),
@@ -58,6 +60,16 @@
     topicMessageMeta: document.getElementById("topic-message-meta"),
     topicMessagePayload: document.getElementById("topic-message-payload"),
     payloadTabButtons: document.querySelectorAll(".payload-tab"),
+    produceModalBackdrop: document.getElementById("produce-modal-backdrop"),
+    produceModalClose: document.getElementById("produce-modal-close"),
+    produceForm: document.getElementById("produce-form"),
+    produceTopic: document.getElementById("produce-topic"),
+    produceKey: document.getElementById("produce-key"),
+    produceHeaders: document.getElementById("produce-headers"),
+    produceValue: document.getElementById("produce-value"),
+    produceStatus: document.getElementById("produce-status"),
+    produceCancel: document.getElementById("produce-cancel"),
+    produceSubmit: document.getElementById("produce-submit"),
     brokerDetailsEmpty: document.getElementById("broker-details-empty"),
     brokerDetailsGrid: document.getElementById("broker-details-grid"),
     detailBrokerName: document.getElementById("detail-broker-name"),
@@ -103,9 +115,12 @@
       refs.topicsSearch &&
       refs.groupsSearch &&
       refs.topicMessagesPanel &&
+      refs.topicDetailsActions &&
+      refs.topicBreadcrumbLink &&
+      refs.topicBreadcrumbPath &&
+      refs.topicProduceOpen &&
       refs.detailsEmpty &&
       refs.detailsGrid &&
-      refs.topicDetailsBack &&
       refs.partitionsWrap &&
       refs.detailTopicName &&
       refs.detailTopicPartitions &&
@@ -127,7 +142,6 @@
       refs.topicConsumersWrap &&
       refs.topicConsumersBody &&
       refs.topicPartitionsBody &&
-      refs.topicMessagesReload &&
       refs.topicMessagesStatus &&
       refs.topicMessagesWrap &&
       refs.topicMessagesBody &&
@@ -136,6 +150,16 @@
       refs.topicMessagePayload &&
       refs.payloadTabButtons &&
       refs.payloadTabButtons.length === 3 &&
+      refs.produceModalBackdrop &&
+      refs.produceModalClose &&
+      refs.produceForm &&
+      refs.produceTopic &&
+      refs.produceKey &&
+      refs.produceHeaders &&
+      refs.produceValue &&
+      refs.produceStatus &&
+      refs.produceCancel &&
+      refs.produceSubmit &&
       refs.brokerDetailsEmpty &&
       refs.brokerDetailsGrid &&
       refs.detailBrokerName &&

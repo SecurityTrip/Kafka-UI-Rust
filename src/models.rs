@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Topic {
@@ -20,10 +20,23 @@ pub struct TopicPartition {
     pub isr: Vec<i32>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TopicMessageHeader {
     pub key: String,
     pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ProduceMessageRequest {
+    pub key: Option<String>,
+    pub value: String,
+    #[serde(default)]
+    pub headers: Vec<TopicMessageHeader>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProduceMessageResponse {
+    pub status: &'static str,
 }
 
 #[derive(Debug, Clone, Serialize)]

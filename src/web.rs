@@ -9,7 +9,7 @@ use axum::{
         Html, IntoResponse,
         sse::{Event, KeepAlive, Sse},
     },
-    routing::get,
+    routing::{get, post},
 };
 use tower_http::services::ServeDir;
 
@@ -17,7 +17,7 @@ use crate::{
     error::AppError,
     models::{
         Broker, ClusterOverview, ConsumerGroup, HealthResponse, ListResponse, SnapshotResponse,
-        Topic, TopicMessage, TopicOverviewResponse,
+        Topic, TopicMessage, TopicOverviewResponse, ProduceMessageRequest, ProduceMessageResponse,
     },
     state::AppState,
 };
@@ -40,7 +40,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/cluster", get(api_cluster))
         .route("/api/topics", get(api_topics))
         .route("/api/topics/{topic}/overview", get(api_topic_overview))
-        .route("/api/topics/{topic}/messages", get(api_topic_messages))
+        .route(
+            "/api/topics/{topic}/messages",
+            get(api_topic_messages).post(api_topic_produce_message),
+        )
         .route("/api/brokers", get(api_brokers))
         .route("/api/groups", get(api_groups))
         .nest_service("/static", ServeDir::new("templates/static"))
@@ -178,6 +181,19 @@ async fn api_topic_overview(
 ) -> Result<Json<TopicOverviewResponse>, AppError> {
     let overview = state.kafka_client().fetch_topic_overview(topic).await?;
     Ok(Json(overview))
+}
+
+async fn api_topic_produce_message(
+    Path(topic): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<ProduceMessageRequest>,
+) -> Result<Json<ProduceMessageResponse>, AppError> {
+    state
+        .kafka_client()
+        .produce_topic_message(topic, payload.key, payload.value, payload.headers)
+        .await?;
+
+    Ok(Json(ProduceMessageResponse { status: "ok" }))
 }
 
 async fn api_groups(

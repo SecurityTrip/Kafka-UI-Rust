@@ -159,6 +159,39 @@
     return "value";
   }
 
+  function normalizeHeadersInput(text) {
+    var trimmed = String(text || "").trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    var parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter(function (item) {
+          return item && typeof item === "object" && typeof item.key === "string";
+        })
+        .map(function (item) {
+          return {
+            key: item.key,
+            value: item.value === undefined || item.value === null ? null : String(item.value),
+          };
+        });
+    }
+
+    if (parsed && typeof parsed === "object") {
+      return Object.keys(parsed).map(function (key) {
+        var value = parsed[key];
+        return {
+          key: key,
+          value: value === undefined || value === null ? null : String(value),
+        };
+      });
+    }
+
+    throw new Error("Headers must be a JSON object or array.");
+  }
+
   function formatMessagePayloadByTab(message, tab) {
     if (!message) {
       return "null";
@@ -316,6 +349,8 @@
     var state = window.KafkaUIState;
 
     if (!topic) {
+      refs.topicDetailsActions.hidden = true;
+      refs.topicBreadcrumbPath.textContent = "Topics/-";
       refs.detailsEmpty.hidden = false;
       refs.detailsGrid.hidden = true;
       refs.partitionsWrap.hidden = true;
@@ -345,6 +380,8 @@
       return;
     }
 
+    refs.topicDetailsActions.hidden = false;
+    refs.topicBreadcrumbPath.textContent = "Topics/" + topic.name;
     refs.detailsEmpty.hidden = true;
     refs.detailsGrid.hidden = false;
     refs.partitionsWrap.hidden = false;
@@ -883,20 +920,125 @@
       window.KafkaUIState.selectedTopicMessageId = row.getAttribute("data-message-id");
       renderTopicMessages();
     });
+  }
 
-    refs.topicMessagesReload.addEventListener("click", function () {
-      var state = window.KafkaUIState;
-      if (!state.topicMessagesTopic) {
-        return;
-      }
-      loadTopicMessages(state.topicMessagesTopic, true);
+  function bindTopicBreadcrumb() {
+    var refs = window.KafkaUIDom.refs;
+    refs.topicBreadcrumbLink.addEventListener("click", function () {
+      window.KafkaUIState.selectedTopic = null;
+      window.location.hash = "topics";
+      rerender();
     });
   }
 
-  function bindTopicDetailsBack() {
+  function setProduceStatus(message, isError) {
     var refs = window.KafkaUIDom.refs;
-    refs.topicDetailsBack.addEventListener("click", function () {
-      window.location.hash = "topics";
+    refs.produceStatus.hidden = false;
+    refs.produceStatus.textContent = message;
+    refs.produceStatus.style.color = isError ? "#b91c1c" : "#0f766e";
+  }
+
+  function closeProduceModal() {
+    var refs = window.KafkaUIDom.refs;
+    refs.produceModalBackdrop.classList.add("is-hidden");
+    refs.produceStatus.hidden = true;
+    refs.produceStatus.textContent = "";
+    refs.produceSubmit.disabled = false;
+  }
+
+  function openProduceModal() {
+    var refs = window.KafkaUIDom.refs;
+    var state = window.KafkaUIState;
+    if (!state.selectedTopic) {
+      return;
+    }
+
+    refs.produceTopic.value = state.selectedTopic;
+    refs.produceKey.value = "";
+    refs.produceHeaders.value = "";
+    refs.produceValue.value = "";
+    refs.produceStatus.hidden = true;
+    refs.produceStatus.textContent = "";
+    refs.produceSubmit.disabled = false;
+    refs.produceModalBackdrop.classList.remove("is-hidden");
+    refs.produceValue.focus();
+  }
+
+  function bindProduceModal() {
+    var refs = window.KafkaUIDom.refs;
+
+    refs.topicProduceOpen.addEventListener("click", function () {
+      openProduceModal();
+    });
+
+    refs.produceModalClose.addEventListener("click", function () {
+      closeProduceModal();
+    });
+
+    refs.produceCancel.addEventListener("click", function () {
+      closeProduceModal();
+    });
+
+    refs.produceModalBackdrop.addEventListener("click", function (event) {
+      if (event.target === refs.produceModalBackdrop) {
+        closeProduceModal();
+      }
+    });
+
+    refs.produceForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      var state = window.KafkaUIState;
+      var topicName = state.selectedTopic;
+      if (!topicName) {
+        setProduceStatus("No topic selected.", true);
+        return;
+      }
+
+      var rawValue = refs.produceValue.value;
+      if (!String(rawValue || "").trim()) {
+        setProduceStatus("Message value is required.", true);
+        return;
+      }
+
+      var headers;
+      try {
+        headers = normalizeHeadersInput(refs.produceHeaders.value);
+      } catch (_e) {
+        setProduceStatus("Invalid headers JSON.", true);
+        return;
+      }
+
+      refs.produceSubmit.disabled = true;
+      setProduceStatus("Sending message...", false);
+
+      fetch("/api/topics/" + encodeURIComponent(topicName) + "/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: String(refs.produceKey.value || "").trim() || null,
+          value: rawValue,
+          headers: headers,
+        }),
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error("Produce failed");
+          }
+          return response.json();
+        })
+        .then(function () {
+          setProduceStatus("Message sent.", false);
+          loadTopicMessages(topicName, true);
+          loadTopicOverview(topicName, true);
+          setTimeout(function () {
+            closeProduceModal();
+          }, 300);
+        })
+        .catch(function () {
+          refs.produceSubmit.disabled = false;
+          setProduceStatus("Failed to send message.", true);
+        });
     });
   }
 
@@ -1042,7 +1184,8 @@
     bindTopicSelection();
     bindBrokerSelection();
     bindTopicMessages();
-    bindTopicDetailsBack();
+    bindTopicBreadcrumb();
+    bindProduceModal();
     bindPayloadTabs();
     bindFilters();
 
@@ -1054,7 +1197,7 @@
     }, 1500);
 
     window.addEventListener("hashchange", function () {
-      if ((window.location.hash || "").indexOf("#topics/") === 0) {
+      if ((window.location.hash || "").indexOf("#topics") === 0) {
         rerender();
       }
     });

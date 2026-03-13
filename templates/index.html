@@ -85,7 +85,12 @@
         <article class="panel" id="topic-details-panel" data-view="topics">
           <div class="panel-head">
             <h2 id="topic-details-title">Topic Details</h2>
-            <button class="panel-action" id="topic-details-back" type="button">Back to Topics</button>
+          </div>
+          <div class="topic-details-actions" id="topic-details-actions" hidden>
+            <button class="topic-breadcrumb-link" id="topic-breadcrumb-link" type="button">
+              <span id="topic-breadcrumb-path">Topics/-</span>
+            </button>
+            <button class="panel-action" id="topic-produce-open" type="button">Produce message</button>
           </div>
           <div class="details-body">
             <p class="details-empty" id="topic-details-empty">Select a topic to inspect partition leaders, replicas, and ISR.</p>
@@ -148,7 +153,6 @@
         <article class="panel" id="topic-messages-panel" data-view="topics">
           <div class="panel-head">
             <h2>Topic Messages</h2>
-            <button class="panel-action" id="topic-messages-reload" type="button">Reload</button>
           </div>
           <div class="details-body">
             <p class="details-empty" id="topic-messages-status" hidden>Loading topic messages...</p>
@@ -305,6 +309,38 @@
           </div>
         </article>
       </section>
+
+      <div class="modal-backdrop is-hidden" id="produce-modal-backdrop">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="produce-modal-title">
+          <div class="panel-head">
+            <h2 id="produce-modal-title">Produce Message</h2>
+            <button class="panel-action" id="produce-modal-close" type="button">Close</button>
+          </div>
+          <form class="modal-body" id="produce-form">
+            <div class="modal-field">
+              <label for="produce-topic">Topic</label>
+              <input id="produce-topic" type="text" readonly />
+            </div>
+            <div class="modal-field">
+              <label for="produce-key">Key (optional)</label>
+              <input id="produce-key" type="text" placeholder="Message key" />
+            </div>
+            <div class="modal-field">
+              <label for="produce-headers">Headers JSON (optional)</label>
+              <textarea id="produce-headers" rows="3" placeholder='{"source":"ui"} or [{"key":"source","value":"ui"}]'></textarea>
+            </div>
+            <div class="modal-field">
+              <label for="produce-value">Value JSON/Text</label>
+              <textarea id="produce-value" rows="8" required placeholder='{"event":"created"}'></textarea>
+            </div>
+            <p class="details-empty" id="produce-status" hidden></p>
+            <div class="modal-actions">
+              <button class="panel-action" id="produce-cancel" type="button">Cancel</button>
+              <button class="panel-action panel-action-primary" id="produce-submit" type="submit">Send</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </main>
   </div>
   <script src="/static/ui/state.js"></script>
