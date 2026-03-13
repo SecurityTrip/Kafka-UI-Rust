@@ -57,6 +57,7 @@
     topicMessageView: document.getElementById("topic-message-view"),
     topicMessageMeta: document.getElementById("topic-message-meta"),
     topicMessagePayload: document.getElementById("topic-message-payload"),
+    payloadTabButtons: document.querySelectorAll(".payload-tab"),
     brokerDetailsEmpty: document.getElementById("broker-details-empty"),
     brokerDetailsGrid: document.getElementById("broker-details-grid"),
     detailBrokerName: document.getElementById("detail-broker-name"),
@@ -133,6 +134,8 @@
       refs.topicMessageView &&
       refs.topicMessageMeta &&
       refs.topicMessagePayload &&
+      refs.payloadTabButtons &&
+      refs.payloadTabButtons.length === 3 &&
       refs.brokerDetailsEmpty &&
       refs.brokerDetailsGrid &&
       refs.detailBrokerName &&

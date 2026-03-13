@@ -119,17 +119,58 @@
     return text.slice(0, 56) + "...";
   }
 
-  function formatMessagePayload(value) {
+  function parseMaybeJson(value) {
     if (value === null || value === undefined) {
-      return "null";
+      return null;
     }
 
     var text = String(value);
     try {
-      return JSON.stringify(JSON.parse(text), null, 2);
+      return JSON.parse(text);
     } catch (_e) {
       return text;
     }
+  }
+
+  function normalizePayloadTab(tab) {
+    if (tab === "key" || tab === "headers" || tab === "value") {
+      return tab;
+    }
+    return "value";
+  }
+
+  function formatMessagePayloadByTab(message, tab) {
+    if (!message) {
+      return "null";
+    }
+
+    var normalizedTab = normalizePayloadTab(tab);
+
+    if (normalizedTab === "key") {
+      return JSON.stringify(parseMaybeJson(message.key), null, 2);
+    }
+
+    if (normalizedTab === "headers") {
+      var headers = (message.headers || []).map(function (header) {
+        return {
+          key: header.key,
+          value: parseMaybeJson(header.value),
+        };
+      });
+      return JSON.stringify(headers, null, 2);
+    }
+
+    return JSON.stringify(parseMaybeJson(message.value), null, 2);
+  }
+
+  function renderPayloadTabs() {
+    var refs = window.KafkaUIDom.refs;
+    var state = window.KafkaUIState;
+    var activeTab = normalizePayloadTab(state.selectedPayloadTab);
+    refs.payloadTabButtons.forEach(function (button) {
+      var tab = button.getAttribute("data-payload-tab");
+      button.classList.toggle("is-active", tab === activeTab);
+    });
   }
 
   function highlightJson(jsonText) {
@@ -277,6 +318,7 @@
       state.topicMessagesTopic = null;
       state.topicMessages = [];
       state.selectedTopicMessageId = null;
+      state.selectedPayloadTab = "value";
       state.topicMessagesLoading = false;
       state.topicMessagesError = "";
       return;
@@ -511,7 +553,10 @@
       selected.offset +
       " | Timestamp " +
       formatTimestamp(selected.timestamp_ms);
-    refs.topicMessagePayload.innerHTML = highlightJson(formatMessagePayload(selected.value));
+    renderPayloadTabs();
+    refs.topicMessagePayload.innerHTML = highlightJson(
+      formatMessagePayloadByTab(selected, state.selectedPayloadTab)
+    );
   }
 
   function loadTopicMessages(topicName, force) {
@@ -788,6 +833,17 @@
     });
   }
 
+  function bindPayloadTabs() {
+    var refs = window.KafkaUIDom.refs;
+    refs.payloadTabButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var state = window.KafkaUIState;
+        state.selectedPayloadTab = normalizePayloadTab(button.getAttribute("data-payload-tab"));
+        renderTopicMessages();
+      });
+    });
+  }
+
   function renderSnapshot(snapshot) {
     if (!snapshot) {
       return;
@@ -920,6 +976,7 @@
     bindBrokerSelection();
     bindTopicMessages();
     bindTopicDetailsBack();
+    bindPayloadTabs();
     bindFilters();
 
     if (window.KafkaUIState.topicDetailsRefreshTimer) {

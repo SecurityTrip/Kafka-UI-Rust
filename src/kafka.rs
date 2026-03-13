@@ -11,13 +11,14 @@ use rdkafka::{
     consumer::{BaseConsumer, Consumer},
     client::DefaultClientContext,
     error::KafkaError as RdkafkaError,
-    message::Message,
+    message::{Headers, Message},
     topic_partition_list::{Offset, TopicPartitionList},
 };
 use thiserror::Error;
 
 use crate::models::{
     Broker, ClusterOverview, ConsumerGroup, Topic, TopicConsumer, TopicMessage,
+    TopicMessageHeader,
     TopicOverviewResponse, TopicPartition,
 };
 
@@ -300,10 +301,25 @@ fn fetch_topic_messages_blocking(
                 let value = message
                     .payload()
                     .map(|v| String::from_utf8_lossy(v).to_string());
+                let headers = message
+                    .headers()
+                    .map(|items| {
+                        items
+                            .iter()
+                            .map(|header| TopicMessageHeader {
+                                key: header.key.to_string(),
+                                value: header
+                                    .value
+                                    .map(|raw| String::from_utf8_lossy(raw).to_string()),
+                            })
+                            .collect::<Vec<TopicMessageHeader>>()
+                    })
+                    .unwrap_or_default();
                 let topic_message = TopicMessage {
                     partition: message.partition(),
                     offset: message.offset(),
                     timestamp_ms: message.timestamp().to_millis(),
+                    headers,
                     key_size: message.key().map(|v| v.len()).unwrap_or(0),
                     value_size: message.payload().map(|v| v.len()).unwrap_or(0),
                     key,
