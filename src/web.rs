@@ -1,39 +1,66 @@
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc, time::Duration};
 
+use async_stream::stream;
 use askama::Template;
 use axum::{
     Json, Router,
-    extract::State,
-    response::{Html, IntoResponse},
+    extract::{Path, Query, State},
+    response::{
+        Html, IntoResponse,
+        sse::{Event, KeepAlive, Sse},
+    },
     routing::get,
 };
+use tower_http::services::ServeDir;
 
 use crate::{
     error::AppError,
-    models::{Broker, HealthResponse, ListResponse, Topic},
+    models::{
+        Broker, ClusterOverview, ConsumerGroup, HealthResponse, ListResponse, SnapshotResponse,
+        Topic, TopicMessage, TopicOverviewResponse,
+    },
     state::AppState,
 };
 
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate<'a> {
+    cluster: &'a ClusterOverview,
     topics: &'a [Topic],
     brokers: &'a [Broker],
+    groups: &'a [ConsumerGroup],
 }
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(index))
         .route("/health", get(health))
+        .route("/api/stream", get(api_stream))
+        .route("/api/snapshot", get(api_snapshot))
+        .route("/api/cluster", get(api_cluster))
         .route("/api/topics", get(api_topics))
+        .route("/api/topics/{topic}/overview", get(api_topic_overview))
+        .route("/api/topics/{topic}/messages", get(api_topic_messages))
         .route("/api/brokers", get(api_brokers))
+        .route("/api/groups", get(api_groups))
+        .nest_service("/static", ServeDir::new("templates/static"))
         .with_state(state)
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct TopicMessagesQuery {
+    limit: Option<usize>,
+}
+
 async fn index(State(state): State<Arc<AppState>>) -> Result<impl IntoResponse, AppError> {
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     let template = IndexTemplate {
-        topics: state.topics(),
-        brokers: state.brokers(),
+        cluster: &snapshot.cluster,
+        topics: &snapshot.topics,
+        brokers: &snapshot.brokers,
+        groups: &snapshot.groups,
     };
 
     Ok(Html(template.render()?))
@@ -46,18 +73,121 @@ async fn health() -> Json<HealthResponse> {
     })
 }
 
-async fn api_topics(State(state): State<Arc<AppState>>) -> Json<ListResponse<Topic>> {
-    let items = state.topics().to_vec();
-    Json(ListResponse {
-        total: items.len(),
-        items,
-    })
+async fn api_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let stream = stream! {
+        let mut interval = tokio::time::interval(Duration::from_secs(2));
+        loop {
+            interval.tick().await;
+
+            match state.kafka_client().fetch_snapshot().await {
+                Ok(snapshot) => {
+                    let controller_id = state
+                        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
+                    let payload = SnapshotResponse {
+                        cluster: ClusterOverview {
+                            controller_id,
+                            ..snapshot.cluster
+                        },
+                        brokers: snapshot.brokers,
+                        topics: snapshot.topics,
+                        groups: snapshot.groups,
+                    };
+
+                    match serde_json::to_string(&payload) {
+                        Ok(json) => {
+                            yield Ok::<Event, Infallible>(Event::default().event("snapshot").data(json));
+                        }
+                        Err(error) => {
+                            yield Ok::<Event, Infallible>(Event::default().event("error").data(format!("serialization error: {error}")));
+                        }
+                    }
+                }
+                Err(error) => {
+                    yield Ok::<Event, Infallible>(Event::default().event("error").data(format!("kafka stream error: {error}")));
+                }
+            }
+        }
+    };
+
+    Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)).text("keep-alive"))
 }
 
-async fn api_brokers(State(state): State<Arc<AppState>>) -> Json<ListResponse<Broker>> {
-    let items = state.brokers().to_vec();
-    Json(ListResponse {
+async fn api_snapshot(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<SnapshotResponse>, AppError> {
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
+    Ok(Json(SnapshotResponse {
+        cluster: snapshot.cluster,
+        brokers: snapshot.brokers,
+        topics: snapshot.topics,
+        groups: snapshot.groups,
+    }))
+}
+
+async fn api_cluster(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ClusterOverview>, AppError> {
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
+    Ok(Json(snapshot.cluster))
+}
+
+async fn api_topics(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ListResponse<Topic>>, AppError> {
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
+    Ok(Json(ListResponse {
+        total: snapshot.topics.len(),
+        items: snapshot.topics,
+    }))
+}
+
+async fn api_brokers(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ListResponse<Broker>>, AppError> {
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
+    Ok(Json(ListResponse {
+        total: snapshot.brokers.len(),
+        items: snapshot.brokers,
+    }))
+}
+
+async fn api_topic_messages(
+    Path(topic): Path<String>,
+    Query(query): Query<TopicMessagesQuery>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ListResponse<TopicMessage>>, AppError> {
+    let limit = query.limit.unwrap_or(80).clamp(1, 200);
+    let items = state.kafka_client().fetch_topic_messages(topic, limit).await?;
+    Ok(Json(ListResponse {
         total: items.len(),
         items,
-    })
+    }))
+}
+
+async fn api_topic_overview(
+    Path(topic): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<TopicOverviewResponse>, AppError> {
+    let overview = state.kafka_client().fetch_topic_overview(topic).await?;
+    Ok(Json(overview))
+}
+
+async fn api_groups(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ListResponse<ConsumerGroup>>, AppError> {
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
+    Ok(Json(ListResponse {
+        total: snapshot.groups.len(),
+        items: snapshot.groups,
+    }))
 }

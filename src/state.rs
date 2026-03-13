@@ -1,46 +1,49 @@
-use crate::models::{Broker, Topic};
+use std::sync::Mutex;
+
+use crate::{
+    kafka::KafkaClient,
+    models::Broker,
+};
 
 #[derive(Debug)]
 pub struct AppState {
-    topics: Vec<Topic>,
-    brokers: Vec<Broker>,
+    kafka_client: KafkaClient,
+    last_controller_id: Mutex<Option<i32>>,
 }
 
 impl AppState {
-    pub fn seeded() -> Self {
+    pub fn new(kafka_client: KafkaClient) -> Self {
         Self {
-            topics: vec![
-                Topic {
-                    name: "payments.events".to_string(),
-                    partitions: 12,
-                    replication_factor: 3,
-                },
-                Topic {
-                    name: "orders.v1".to_string(),
-                    partitions: 8,
-                    replication_factor: 3,
-                },
-            ],
-            brokers: vec![
-                Broker {
-                    id: 1,
-                    host: "kafka-1.local".to_string(),
-                    port: 9092,
-                },
-                Broker {
-                    id: 2,
-                    host: "kafka-2.local".to_string(),
-                    port: 9092,
-                },
-            ],
+            kafka_client,
+            last_controller_id: Mutex::new(None),
         }
     }
 
-    pub fn topics(&self) -> &[Topic] {
-        &self.topics
+    pub fn kafka_client(&self) -> &KafkaClient {
+        &self.kafka_client
     }
 
-    pub fn brokers(&self) -> &[Broker] {
-        &self.brokers
+    pub fn stabilize_controller_id(&self, current_id: i32, brokers: &[Broker]) -> i32 {
+        if current_id >= 0 {
+            if let Ok(mut guard) = self.last_controller_id.lock() {
+                *guard = Some(current_id);
+            }
+            return current_id;
+        }
+
+        if let Ok(guard) = self.last_controller_id.lock() {
+            if let Some(last_known) = *guard {
+                return last_known;
+            }
+        }
+
+        if let Some(first_broker) = brokers.first() {
+            if let Ok(mut guard) = self.last_controller_id.lock() {
+                *guard = Some(first_broker.id);
+            }
+            return first_broker.id;
+        }
+
+        -1
     }
 }

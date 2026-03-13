@@ -4,163 +4,307 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Apache Kafka UI</title>
-  <style>
-    :root {
-      --bg: #f4f5f7;
-      --panel: #ffffff;
-      --ink: #1f2937;
-      --muted: #6b7280;
-      --accent: #0f766e;
-      --border: #e5e7eb;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: "Segoe UI", "Noto Sans", sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 10% 10%, #d1fae5 0, transparent 35%),
-        radial-gradient(circle at 90% 20%, #bfdbfe 0, transparent 28%),
-        var(--bg);
-      min-height: 100vh;
-    }
-
-    .container {
-      width: min(1080px, 92vw);
-      margin: 2rem auto;
-    }
-
-    .hero {
-      background: linear-gradient(135deg, #0f766e, #155e75);
-      color: white;
-      border-radius: 16px;
-      padding: 1.4rem 1.6rem;
-      box-shadow: 0 12px 28px rgba(15, 118, 110, 0.25);
-    }
-
-    .hero h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      letter-spacing: 0.03em;
-    }
-
-    .hero p {
-      margin: 0.5rem 0 0;
-      color: #d1fae5;
-    }
-
-    .actions {
-      margin-top: 0.9rem;
-    }
-
-    button {
-      border: 0;
-      background: #ffffff;
-      color: #0f766e;
-      font-weight: 600;
-      border-radius: 10px;
-      padding: 0.55rem 0.9rem;
-      cursor: pointer;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1rem;
-      box-shadow: 0 6px 20px rgba(17, 24, 39, 0.07);
-    }
-
-    .card h2 {
-      margin: 0 0 0.8rem;
-      font-size: 1.1rem;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.95rem;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 0.45rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    th { color: var(--muted); }
-
-    @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="./static/styles.css" />
 </head>
 <body>
-  <main class="container">
-    <section class="hero">
-      <h1>Apache Kafka UI</h1>
-      <p>Minimal SSR dashboard written in Rust (Axum + Askama).</p>
-      <div class="actions">
-        <button onclick="window.location.reload()">Refresh Data</button>
-      </div>
-    </section>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">Apache Kafka UI</div>
+      <div class="cluster-label">Cluster</div>
+      <div class="cluster-value" id="cluster-id">{{ cluster.cluster_id }}</div>
+      <nav class="nav">
+        <button class="nav-item is-active" type="button" data-view="topics">Topics</button>
+        <button class="nav-item" type="button" data-view="brokers">Brokers</button>
+        <button class="nav-item" type="button" data-view="groups">Consumer Groups</button>
+        <button class="nav-item" type="button" data-view="overview">Overview</button>
+      </nav>
+    </aside>
 
-    <section class="grid">
-      <article class="card">
-        <h2>Brokers ({{ brokers.len() }})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Host</th>
-              <th>Port</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for broker in brokers %}
-            <tr>
-              <td>{{ broker.id }}</td>
-              <td>{{ broker.host }}</td>
-              <td>{{ broker.port }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </article>
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h1>Kafka Cluster Dashboard</h1>
+          <p class="cluster-source" id="cluster-source">Connected to <span id="bootstrap-servers">{{ cluster.bootstrap_servers }}</span></p>
+        </div>
+        <span id="live-status" class="live-status">Connecting live stream...</span>
+      </header>
 
-      <article class="card">
-        <h2>Topics ({{ topics.len() }})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Partitions</th>
-              <th>Replication</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for topic in topics %}
-            <tr>
-              <td>{{ topic.name }}</td>
-              <td>{{ topic.partitions }}</td>
-              <td>{{ topic.replication_factor }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </article>
-    </section>
-  </main>
+      <section class="stats-grid" id="overview-panel">
+        <article class="stat-card">
+          <span class="stat-label">Brokers</span>
+          <span class="stat-value" id="broker-count">{{ cluster.broker_count }}</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Topics</span>
+          <span class="stat-value" id="topic-count">{{ cluster.topic_count }}</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Consumer Groups</span>
+          <span class="stat-value" id="group-count">{{ cluster.consumer_group_count }}</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Controller</span>
+          <span class="stat-value" id="controller-id">{{ cluster.controller_id }}</span>
+        </article>
+      </section>
+
+      <section class="panels-grid">
+        <article class="panel" id="topics-panel" data-view="topics">
+          <div class="panel-head">
+            <h2 id="topics-title">Topics ({{ topics.len() }})</h2>
+            <input id="topics-search" class="panel-search" type="search" placeholder="Filter topics..." />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Topic Name</th>
+                  <th>Partitions</th>
+                  <th>Out of sync replicas</th>
+                  <th>Replication Factor</th>
+                  <th>Number of messages</th>
+                  <th>Size</th>
+                </tr>
+              </thead>
+              <tbody id="topics-body">
+                {% for topic in topics %}
+                <tr class="topic-row" data-topic-name="{{ topic.name }}">
+                  <td><button class="topic-link" type="button" data-topic-name="{{ topic.name }}">{{ topic.name }}</button></td>
+                  <td>{{ topic.partitions }}</td>
+                  <td>{{ topic.out_of_sync_replicas }}</td>
+                  <td>{{ topic.replication_factor }}</td>
+                  <td>{{ topic.message_count }}</td>
+                  <td>{% match topic.size_bytes %}{% when Some with (value) %}{{ value }} Bytes{% when None %}-{% endmatch %}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel" id="topic-details-panel" data-view="topics">
+          <div class="panel-head">
+            <h2 id="topic-details-title">Topic Details</h2>
+            <button class="panel-action" id="topic-details-back" type="button">Back to Topics</button>
+          </div>
+          <div class="details-body">
+            <p class="details-empty" id="topic-details-empty">Select a topic to inspect partition leaders, replicas, and ISR.</p>
+            <div class="details-grid" id="topic-details-grid" hidden>
+              <div class="details-kv"><span>Name</span><strong id="detail-topic-name">-</strong></div>
+              <div class="details-kv"><span>Partitions</span><strong id="detail-topic-partitions">-</strong></div>
+              <div class="details-kv"><span>Replication</span><strong id="detail-topic-replication">-</strong></div>
+              <div class="details-kv"><span>Internal</span><strong id="detail-topic-internal">-</strong></div>
+            </div>
+
+            <div class="topic-messages-head" id="topic-overview-head" hidden>
+              <h3>Topic Overview</h3>
+            </div>
+            <p class="details-empty" id="topic-overview-status" hidden>Loading topic overview...</p>
+            <div class="details-grid" id="topic-overview-grid" hidden>
+              <div class="details-kv"><span>Type</span><strong id="topic-overview-type">-</strong></div>
+              <div class="details-kv"><span>In-Sync Replicas</span><strong id="topic-overview-isr">-</strong></div>
+              <div class="details-kv"><span>Total Replicas</span><strong id="topic-overview-replicas">-</strong></div>
+              <div class="details-kv"><span>URP</span><strong id="topic-overview-urp">-</strong></div>
+              <div class="details-kv"><span>Messages</span><strong id="topic-overview-messages">-</strong></div>
+              <div class="details-kv"><span>Cleanup Policy</span><strong id="topic-overview-cleanup">-</strong></div>
+              <div class="details-kv"><span>Segment Size</span><strong id="topic-overview-segment-size">-</strong></div>
+              <div class="details-kv"><span>Segment Count</span><strong id="topic-overview-segment-count">-</strong></div>
+            </div>
+
+            <div class="topic-messages-head" id="topic-consumers-head" hidden>
+              <h3>Consumers</h3>
+            </div>
+            <p class="details-empty" id="topic-consumers-empty" hidden>No active consumer groups for this topic.</p>
+            <div class="table-wrap" id="topic-consumers-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Group</th>
+                    <th>State</th>
+                    <th>Active Consumers</th>
+                    <th>Total Lag</th>
+                  </tr>
+                </thead>
+                <tbody id="topic-consumers-body"></tbody>
+              </table>
+            </div>
+
+            <div class="table-wrap" id="topic-partitions-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Partition</th>
+                    <th>Leader</th>
+                    <th>Replicas</th>
+                    <th>ISR</th>
+                  </tr>
+                </thead>
+                <tbody id="topic-partitions-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel" id="topic-messages-panel" data-view="topics">
+          <div class="panel-head">
+            <h2>Topic Messages</h2>
+            <button class="panel-action" id="topic-messages-reload" type="button">Reload</button>
+          </div>
+          <div class="details-body">
+            <p class="details-empty" id="topic-messages-status" hidden>Loading topic messages...</p>
+            <div class="table-wrap" id="topic-messages-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Partition</th>
+                    <th>Offset</th>
+                    <th>Timestamp</th>
+                    <th>Key Size</th>
+                    <th>Value Size</th>
+                    <th>Value Preview</th>
+                  </tr>
+                </thead>
+                <tbody id="topic-messages-body"></tbody>
+              </table>
+            </div>
+
+            <div class="message-view" id="topic-message-view" hidden>
+              <div class="message-view-meta" id="topic-message-meta">Select a message to inspect key/value payload.</div>
+              <div class="message-view-grid message-view-grid--single">
+                <div class="message-block">
+                  <h4>Payload</h4>
+                  <pre id="topic-message-payload"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel" id="brokers-panel" data-view="brokers">
+          <div class="panel-head">
+            <h2 id="brokers-title">Brokers ({{ brokers.len() }})</h2>
+            <input id="brokers-search" class="panel-search" type="search" placeholder="Filter brokers..." />
+          </div>
+          <div class="broker-kpis" id="brokers-kpis">
+            <div class="broker-kpi-group">
+              <div class="broker-kpi-group-title">Uptime</div>
+              <div class="broker-kpi-grid">
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Broker Count</span>
+                  <strong id="broker-kpi-count">-</strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Active Controller</span>
+                  <strong id="broker-kpi-controller">-</strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Version</span>
+                  <strong id="broker-kpi-version">Unknown</strong>
+                </article>
+              </div>
+            </div>
+
+            <div class="broker-kpi-group">
+              <div class="broker-kpi-group-title">Partitions</div>
+              <div class="broker-kpi-grid broker-kpi-grid--partitions">
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Online</span>
+                  <strong><span id="broker-kpi-online">0</span> of <span id="broker-kpi-online-total">0</span></strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">URP</span>
+                  <strong id="broker-kpi-urp">0</strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">In Sync Replicas</span>
+                  <strong><span id="broker-kpi-isr">0</span> of <span id="broker-kpi-isr-total">0</span></strong>
+                </article>
+                <article class="broker-kpi-card">
+                  <span class="broker-kpi-label">Out Of Sync Replicas</span>
+                  <strong id="broker-kpi-oosr">0</strong>
+                </article>
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Broker ID</th>
+                  <th>Broker</th>
+                  <th>Host</th>
+                  <th>Port</th>
+                  <th>Role</th>
+                  <th>Endpoint</th>
+                </tr>
+              </thead>
+              <tbody id="brokers-body">
+                {% for broker in brokers %}
+                <tr class="broker-row" data-broker-id="{{ broker.id }}">
+                  <td>{{ broker.id }}</td>
+                  <td><button class="broker-link" type="button" data-broker-id="{{ broker.id }}">broker-{{ broker.id }}{% if broker.id == cluster.controller_id %}<span class="controller-check" aria-label="active controller">&#10003;</span>{% endif %}</button></td>
+                  <td>{{ broker.host }}</td>
+                  <td>{{ broker.port }}</td>
+                  <td>{% if broker.id == cluster.controller_id %}<span class="role-pill">Controller<span class="controller-check" aria-label="active controller">&#10003;</span></span>{% else %}<span class="role-pill is-follower">Follower</span>{% endif %}</td>
+                  <td>{{ broker.host }}:{{ broker.port }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel" id="broker-details-panel" data-view="brokers">
+          <div class="panel-head">
+            <h2 id="broker-details-title">Broker Details</h2>
+          </div>
+          <div class="details-body">
+            <p class="details-empty" id="broker-details-empty">Select a broker to inspect endpoint and partition assignment stats.</p>
+            <div class="details-grid" id="broker-details-grid" hidden>
+              <div class="details-kv"><span>Broker</span><strong id="detail-broker-name">-</strong></div>
+              <div class="details-kv"><span>Role</span><strong id="detail-broker-role">-</strong></div>
+              <div class="details-kv"><span>Endpoint</span><strong id="detail-broker-endpoint">-</strong></div>
+              <div class="details-kv"><span>Leader Partitions</span><strong id="detail-broker-leaders">-</strong></div>
+              <div class="details-kv"><span>Replica Partitions</span><strong id="detail-broker-replicas">-</strong></div>
+              <div class="details-kv"><span>ISR Partitions</span><strong id="detail-broker-isr">-</strong></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel" id="groups-panel" data-view="groups">
+          <div class="panel-head">
+            <h2 id="groups-title">Consumer Groups ({{ groups.len() }})</h2>
+            <input id="groups-search" class="panel-search" type="search" placeholder="Filter groups..." />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>State</th>
+                  <th>Members</th>
+                </tr>
+              </thead>
+              <tbody id="groups-body">
+                {% for group in groups %}
+                <tr>
+                  <td>{{ group.name }}</td>
+                  <td><span class="state-pill">{{ group.state }}</span></td>
+                  <td>{{ group.members }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script src="/static/ui/state.js"></script>
+  <script src="/static/ui/dom.js"></script>
+  <script src="/static/ui/render.js"></script>
+  <script src="/static/ui/navigation.js"></script>
+  <script src="/static/ui/stream.js"></script>
+  <script src="/static/app.js"></script>
 </body>
 </html>
