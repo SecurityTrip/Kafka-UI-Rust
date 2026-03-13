@@ -7,6 +7,7 @@ use axum::{
     response::{Html, IntoResponse},
     routing::get,
 };
+use tower_http::services::ServeDir;
 
 use crate::{
     error::AppError,
@@ -27,6 +28,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/health", get(health))
         .route("/api/topics", get(api_topics))
         .route("/api/brokers", get(api_brokers))
+        .nest_service("/static", ServeDir::new("templates/static"))
         .with_state(state)
 }
 
