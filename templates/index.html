@@ -156,6 +156,7 @@
             <table>
               <thead>
                 <tr>
+                  <th>Broker ID</th>
                   <th>Broker</th>
                   <th>Host</th>
                   <th>Port</th>
@@ -166,6 +167,7 @@
               <tbody id="brokers-body">
                 {% for broker in brokers %}
                 <tr class="broker-row" data-broker-id="{{ broker.id }}">
+                  <td>{{ broker.id }}</td>
                   <td><button class="broker-link" type="button" data-broker-id="{{ broker.id }}">broker-{{ broker.id }}{% if broker.id == cluster.controller_id %}<span class="controller-check" aria-label="active controller">&#10003;</span>{% endif %}</button></td>
                   <td>{{ broker.host }}</td>
                   <td>{{ broker.port }}</td>

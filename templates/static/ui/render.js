@@ -341,7 +341,9 @@
         return (
           "<tr class=\"broker-row" +
           selectedClass +
-          "\"><td><button class=\"broker-link\" type=\"button\" data-broker-id=\"" +
+          "\"><td>" +
+          escapeHtml(broker.id) +
+          "</td><td><button class=\"broker-link\" type=\"button\" data-broker-id=\"" +
           escapeHtml(broker.id) +
           "\">broker-" +
           escapeHtml(broker.id) +

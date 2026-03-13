@@ -46,7 +46,9 @@ pub fn router(state: Arc<AppState>) -> Router {
 }
 
 async fn index(State(state): State<Arc<AppState>>) -> Result<impl IntoResponse, AppError> {
-    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     let template = IndexTemplate {
         cluster: &snapshot.cluster,
         topics: &snapshot.topics,
@@ -72,8 +74,13 @@ async fn api_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 
             match state.kafka_client().fetch_snapshot().await {
                 Ok(snapshot) => {
+                    let controller_id = state
+                        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
                     let payload = SnapshotResponse {
-                        cluster: snapshot.cluster,
+                        cluster: ClusterOverview {
+                            controller_id,
+                            ..snapshot.cluster
+                        },
                         brokers: snapshot.brokers,
                         topics: snapshot.topics,
                         groups: snapshot.groups,
@@ -101,7 +108,9 @@ async fn api_stream(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 async fn api_snapshot(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<SnapshotResponse>, AppError> {
-    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     Ok(Json(SnapshotResponse {
         cluster: snapshot.cluster,
         brokers: snapshot.brokers,
@@ -113,14 +122,18 @@ async fn api_snapshot(
 async fn api_cluster(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ClusterOverview>, AppError> {
-    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     Ok(Json(snapshot.cluster))
 }
 
 async fn api_topics(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ListResponse<Topic>>, AppError> {
-    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     Ok(Json(ListResponse {
         total: snapshot.topics.len(),
         items: snapshot.topics,
@@ -130,7 +143,9 @@ async fn api_topics(
 async fn api_brokers(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ListResponse<Broker>>, AppError> {
-    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     Ok(Json(ListResponse {
         total: snapshot.brokers.len(),
         items: snapshot.brokers,
@@ -140,7 +155,9 @@ async fn api_brokers(
 async fn api_groups(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ListResponse<ConsumerGroup>>, AppError> {
-    let snapshot = state.kafka_client().fetch_snapshot().await?;
+    let mut snapshot = state.kafka_client().fetch_snapshot().await?;
+    snapshot.cluster.controller_id = state
+        .stabilize_controller_id(snapshot.cluster.controller_id, &snapshot.brokers);
     Ok(Json(ListResponse {
         total: snapshot.groups.len(),
         items: snapshot.groups,

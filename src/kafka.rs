@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use rdkafka::{
     admin::{AdminClient, AdminOptions, ResourceSpecifier},
+    bindings,
     config::ClientConfig,
     consumer::{BaseConsumer, Consumer},
     client::DefaultClientContext,
@@ -105,6 +106,7 @@ fn fetch_snapshot_blocking(
     timeout: Duration,
 ) -> Result<KafkaSnapshot, KafkaClientError> {
     let consumer = build_consumer(bootstrap_servers)?;
+    let controller_id = fetch_controller_id(&consumer, timeout);
 
     let metadata = consumer.fetch_metadata(None, timeout)?;
     let group_list = consumer.fetch_group_list(None, timeout)?;
@@ -163,7 +165,7 @@ fn fetch_snapshot_blocking(
 
     let cluster = ClusterOverview {
         cluster_id: "unknown".to_string(),
-        controller_id: metadata.orig_broker_id(),
+        controller_id,
         kafka_version: "Unknown".to_string(),
         broker_count: brokers.len(),
         topic_count: topics.len(),
@@ -188,6 +190,11 @@ fn build_consumer(bootstrap_servers: &str) -> Result<BaseConsumer, KafkaClientEr
         .create::<BaseConsumer>()?;
 
     Ok(consumer)
+}
+
+fn fetch_controller_id(consumer: &BaseConsumer, timeout: Duration) -> i32 {
+    let timeout_ms = timeout.as_millis().min(i32::MAX as u128) as i32;
+    unsafe { bindings::rd_kafka_controllerid(consumer.client().native_ptr(), timeout_ms) }
 }
 
 #[derive(Debug, Error)]
