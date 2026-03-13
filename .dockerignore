@@ -1,0 +1,19 @@
+# Strict allowlist: send only build-required files to Docker context.
+*
+
+# Required Rust manifest files.
+!Cargo.toml
+!Cargo.lock
+
+# Required source and runtime templates.
+!src/
+!src/**
+!templates/
+!templates/**
+
+# Optional rust toolchain config if present.
+!.cargo/
+!.cargo/**
+
+# Optional build script if the project adds one.
+!build.rs
