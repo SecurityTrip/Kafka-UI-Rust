@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
     process::Command,
-    time::Duration,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
 };
 
 use rdkafka::{
@@ -26,6 +27,19 @@ use crate::models::{
 pub struct KafkaClient {
     bootstrap_servers: String,
     timeout: Duration,
+}
+
+const TOPIC_OVERVIEW_CACHE_TTL: Duration = Duration::from_secs(15);
+
+#[derive(Debug, Clone)]
+struct CachedOverview {
+    updated_at: Instant,
+    overview: TopicOverviewResponse,
+}
+
+fn topic_overview_cache() -> &'static Mutex<HashMap<String, CachedOverview>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, CachedOverview>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 impl KafkaClient {
@@ -124,12 +138,33 @@ impl KafkaClient {
     ) -> Result<TopicOverviewResponse, KafkaClientError> {
         let bootstrap_servers = self.bootstrap_servers.clone();
         let timeout = self.timeout;
+        let cache_key = format!("{}::{}", bootstrap_servers, topic);
 
-        tokio::task::spawn_blocking(move || {
+        if let Ok(cache) = topic_overview_cache().lock() {
+            if let Some(entry) = cache.get(&cache_key) {
+                if entry.updated_at.elapsed() < TOPIC_OVERVIEW_CACHE_TTL {
+                    return Ok(entry.overview.clone());
+                }
+            }
+        }
+
+        let overview = tokio::task::spawn_blocking(move || {
             fetch_topic_overview_blocking(&bootstrap_servers, timeout, &topic)
         })
         .await
-        .map_err(KafkaClientError::Join)?
+        .map_err(KafkaClientError::Join)??;
+
+        if let Ok(mut cache) = topic_overview_cache().lock() {
+            cache.insert(
+                cache_key,
+                CachedOverview {
+                    updated_at: Instant::now(),
+                    overview: overview.clone(),
+                },
+            );
+        }
+
+        Ok(overview)
     }
 }
 
@@ -293,8 +328,8 @@ fn fetch_topic_messages_blocking(
 
     let mut messages: Vec<TopicMessage> = Vec::new();
     let mut idle_polls = 0usize;
-    while messages.len() < limit && idle_polls < 8 {
-        match consumer.poll(Duration::from_millis(120)) {
+    while messages.len() < limit && idle_polls < 4 {
+        match consumer.poll(Duration::from_millis(70)) {
             Some(Ok(message)) => {
                 idle_polls = 0;
                 let key = message.key().map(|v| String::from_utf8_lossy(v).to_string());

@@ -164,7 +164,7 @@ async fn api_topic_messages(
     Query(query): Query<TopicMessagesQuery>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ListResponse<TopicMessage>>, AppError> {
-    let limit = query.limit.unwrap_or(80).clamp(1, 200);
+    let limit = query.limit.unwrap_or(50).clamp(1, 200);
     let items = state.kafka_client().fetch_topic_messages(topic, limit).await?;
     Ok(Json(ListResponse {
         total: items.len(),

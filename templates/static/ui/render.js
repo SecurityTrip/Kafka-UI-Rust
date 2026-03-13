@@ -561,6 +561,9 @@
 
   function loadTopicMessages(topicName, force) {
     var state = window.KafkaUIState;
+    if (state.topicMessagesLoading && state.topicMessagesTopic === topicName) {
+      return;
+    }
     if (!force && state.topicMessagesTopic === topicName && state.topicMessages.length) {
       return;
     }
@@ -610,6 +613,9 @@
 
   function loadTopicOverview(topicName, force) {
     var state = window.KafkaUIState;
+    if (state.topicOverviewLoading && state.topicOverviewTopic === topicName) {
+      return;
+    }
     if (!force && state.topicOverviewTopic === topicName && state.topicOverview) {
       return;
     }
@@ -707,18 +713,27 @@
       }
     }
 
-    renderTopicDetails(activeTopic);
-
     if (!activeTopic) {
+      renderTopicDetails(null);
       return;
     }
 
-    if (state.topicMessagesTopic !== activeTopic.name) {
+    var topicChanged = state.topicMessagesTopic !== activeTopic.name;
+    if (topicChanged) {
       state.topicMessagesTopic = activeTopic.name;
       state.topicOverviewTopic = activeTopic.name;
+      state.topicMessages = [];
+      state.topicMessagesError = "";
+      state.selectedTopicMessageId = null;
+      state.topicOverview = null;
+      state.topicOverviewError = "";
+      state.selectedPayloadTab = "value";
+
       loadTopicMessages(activeTopic.name, true);
       loadTopicOverview(activeTopic.name, true);
     }
+
+    renderTopicDetails(activeTopic);
   }
 
   function renderBrokerDetails(broker, stats, controllerId) {
@@ -984,7 +999,7 @@
     }
     window.KafkaUIState.topicDetailsRefreshTimer = setInterval(function () {
       refreshActiveTopicDetails(true);
-    }, 5000);
+    }, 10000);
 
     window.addEventListener("hashchange", function () {
       if ((window.location.hash || "").indexOf("#topics/") === 0) {
