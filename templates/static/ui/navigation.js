@@ -1,15 +1,22 @@
 (function (window) {
+  function isTopicDetailsRoute() {
+    return (window.location.hash || "").indexOf("#topics/") === 0;
+  }
+
   function sectionsForView(view) {
     if (view === "brokers") {
-      return { topics: false, details: false, brokers: true, brokerDetails: true, groups: false };
+      return { topics: false, topicMessages: false, details: false, brokers: true, brokerDetails: true, groups: false };
     }
     if (view === "groups") {
-      return { topics: false, details: false, brokers: false, brokerDetails: false, groups: true };
+      return { topics: false, topicMessages: false, details: false, brokers: false, brokerDetails: false, groups: true };
     }
     if (view === "overview") {
-      return { topics: true, details: false, brokers: true, brokerDetails: false, groups: true };
+      return { topics: true, topicMessages: false, details: false, brokers: true, brokerDetails: false, groups: true };
     }
-    return { topics: true, details: true, brokers: false, brokerDetails: false, groups: false };
+    if (isTopicDetailsRoute()) {
+      return { topics: false, topicMessages: true, details: true, brokers: false, brokerDetails: false, groups: false };
+    }
+    return { topics: true, topicMessages: false, details: false, brokers: false, brokerDetails: false, groups: false };
   }
 
   function applyView(view) {
@@ -20,7 +27,10 @@
     state.activeView = view;
 
     refs.topicsPanel.classList.toggle("is-hidden", !layout.topics);
+    refs.topicsPanel.classList.toggle("is-fullpage", view === "topics" && layout.topics && !layout.details);
+    refs.topicMessagesPanel.classList.toggle("is-hidden", !layout.topicMessages);
     refs.topicDetailsPanel.classList.toggle("is-hidden", !layout.details);
+    refs.topicDetailsPanel.classList.toggle("is-fullpage", false);
     refs.brokersPanel.classList.toggle("is-hidden", !layout.brokers);
     refs.brokerDetailsPanel.classList.toggle("is-hidden", !layout.brokerDetails);
     refs.groupsPanel.classList.toggle("is-hidden", !layout.groups);

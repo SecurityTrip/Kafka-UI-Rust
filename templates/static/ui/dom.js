@@ -25,14 +25,38 @@
     brokerKpiOosr: document.getElementById("broker-kpi-oosr"),
     topicsSearch: document.getElementById("topics-search"),
     groupsSearch: document.getElementById("groups-search"),
+    topicMessagesPanel: document.getElementById("topic-messages-panel"),
     detailsEmpty: document.getElementById("topic-details-empty"),
     detailsGrid: document.getElementById("topic-details-grid"),
+    topicDetailsBack: document.getElementById("topic-details-back"),
     partitionsWrap: document.getElementById("topic-partitions-wrap"),
     detailTopicName: document.getElementById("detail-topic-name"),
     detailTopicPartitions: document.getElementById("detail-topic-partitions"),
     detailTopicReplication: document.getElementById("detail-topic-replication"),
     detailTopicInternal: document.getElementById("detail-topic-internal"),
+    topicOverviewHead: document.getElementById("topic-overview-head"),
+    topicOverviewStatus: document.getElementById("topic-overview-status"),
+    topicOverviewGrid: document.getElementById("topic-overview-grid"),
+    topicOverviewType: document.getElementById("topic-overview-type"),
+    topicOverviewIsr: document.getElementById("topic-overview-isr"),
+    topicOverviewReplicas: document.getElementById("topic-overview-replicas"),
+    topicOverviewUrp: document.getElementById("topic-overview-urp"),
+    topicOverviewMessages: document.getElementById("topic-overview-messages"),
+    topicOverviewCleanup: document.getElementById("topic-overview-cleanup"),
+    topicOverviewSegmentSize: document.getElementById("topic-overview-segment-size"),
+    topicOverviewSegmentCount: document.getElementById("topic-overview-segment-count"),
+    topicConsumersHead: document.getElementById("topic-consumers-head"),
+    topicConsumersEmpty: document.getElementById("topic-consumers-empty"),
+    topicConsumersWrap: document.getElementById("topic-consumers-wrap"),
+    topicConsumersBody: document.getElementById("topic-consumers-body"),
     topicPartitionsBody: document.getElementById("topic-partitions-body"),
+    topicMessagesReload: document.getElementById("topic-messages-reload"),
+    topicMessagesStatus: document.getElementById("topic-messages-status"),
+    topicMessagesWrap: document.getElementById("topic-messages-wrap"),
+    topicMessagesBody: document.getElementById("topic-messages-body"),
+    topicMessageView: document.getElementById("topic-message-view"),
+    topicMessageMeta: document.getElementById("topic-message-meta"),
+    topicMessagePayload: document.getElementById("topic-message-payload"),
     brokerDetailsEmpty: document.getElementById("broker-details-empty"),
     brokerDetailsGrid: document.getElementById("broker-details-grid"),
     detailBrokerName: document.getElementById("detail-broker-name"),
@@ -77,14 +101,38 @@
       refs.brokerKpiOosr &&
       refs.topicsSearch &&
       refs.groupsSearch &&
+      refs.topicMessagesPanel &&
       refs.detailsEmpty &&
       refs.detailsGrid &&
+      refs.topicDetailsBack &&
       refs.partitionsWrap &&
       refs.detailTopicName &&
       refs.detailTopicPartitions &&
       refs.detailTopicReplication &&
       refs.detailTopicInternal &&
+      refs.topicOverviewHead &&
+      refs.topicOverviewStatus &&
+      refs.topicOverviewGrid &&
+      refs.topicOverviewType &&
+      refs.topicOverviewIsr &&
+      refs.topicOverviewReplicas &&
+      refs.topicOverviewUrp &&
+      refs.topicOverviewMessages &&
+      refs.topicOverviewCleanup &&
+      refs.topicOverviewSegmentSize &&
+      refs.topicOverviewSegmentCount &&
+      refs.topicConsumersHead &&
+      refs.topicConsumersEmpty &&
+      refs.topicConsumersWrap &&
+      refs.topicConsumersBody &&
       refs.topicPartitionsBody &&
+      refs.topicMessagesReload &&
+      refs.topicMessagesStatus &&
+      refs.topicMessagesWrap &&
+      refs.topicMessagesBody &&
+      refs.topicMessageView &&
+      refs.topicMessageMeta &&
+      refs.topicMessagePayload &&
       refs.brokerDetailsEmpty &&
       refs.brokerDetailsGrid &&
       refs.detailBrokerName &&

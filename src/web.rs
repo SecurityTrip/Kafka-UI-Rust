@@ -4,7 +4,7 @@ use async_stream::stream;
 use askama::Template;
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Path, Query, State},
     response::{
         Html, IntoResponse,
         sse::{Event, KeepAlive, Sse},
@@ -17,7 +17,7 @@ use crate::{
     error::AppError,
     models::{
         Broker, ClusterOverview, ConsumerGroup, HealthResponse, ListResponse, SnapshotResponse,
-        Topic,
+        Topic, TopicMessage, TopicOverviewResponse,
     },
     state::AppState,
 };
@@ -39,10 +39,17 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/snapshot", get(api_snapshot))
         .route("/api/cluster", get(api_cluster))
         .route("/api/topics", get(api_topics))
+        .route("/api/topics/{topic}/overview", get(api_topic_overview))
+        .route("/api/topics/{topic}/messages", get(api_topic_messages))
         .route("/api/brokers", get(api_brokers))
         .route("/api/groups", get(api_groups))
         .nest_service("/static", ServeDir::new("templates/static"))
         .with_state(state)
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct TopicMessagesQuery {
+    limit: Option<usize>,
 }
 
 async fn index(State(state): State<Arc<AppState>>) -> Result<impl IntoResponse, AppError> {
@@ -150,6 +157,27 @@ async fn api_brokers(
         total: snapshot.brokers.len(),
         items: snapshot.brokers,
     }))
+}
+
+async fn api_topic_messages(
+    Path(topic): Path<String>,
+    Query(query): Query<TopicMessagesQuery>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ListResponse<TopicMessage>>, AppError> {
+    let limit = query.limit.unwrap_or(80).clamp(1, 200);
+    let items = state.kafka_client().fetch_topic_messages(topic, limit).await?;
+    Ok(Json(ListResponse {
+        total: items.len(),
+        items,
+    }))
+}
+
+async fn api_topic_overview(
+    Path(topic): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<TopicOverviewResponse>, AppError> {
+    let overview = state.kafka_client().fetch_topic_overview(topic).await?;
+    Ok(Json(overview))
 }
 
 async fn api_groups(

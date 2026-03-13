@@ -85,6 +85,7 @@
         <article class="panel" id="topic-details-panel" data-view="topics">
           <div class="panel-head">
             <h2 id="topic-details-title">Topic Details</h2>
+            <button class="panel-action" id="topic-details-back" type="button">Back to Topics</button>
           </div>
           <div class="details-body">
             <p class="details-empty" id="topic-details-empty">Select a topic to inspect partition leaders, replicas, and ISR.</p>
@@ -94,6 +95,40 @@
               <div class="details-kv"><span>Replication</span><strong id="detail-topic-replication">-</strong></div>
               <div class="details-kv"><span>Internal</span><strong id="detail-topic-internal">-</strong></div>
             </div>
+
+            <div class="topic-messages-head" id="topic-overview-head" hidden>
+              <h3>Topic Overview</h3>
+            </div>
+            <p class="details-empty" id="topic-overview-status" hidden>Loading topic overview...</p>
+            <div class="details-grid" id="topic-overview-grid" hidden>
+              <div class="details-kv"><span>Type</span><strong id="topic-overview-type">-</strong></div>
+              <div class="details-kv"><span>In-Sync Replicas</span><strong id="topic-overview-isr">-</strong></div>
+              <div class="details-kv"><span>Total Replicas</span><strong id="topic-overview-replicas">-</strong></div>
+              <div class="details-kv"><span>URP</span><strong id="topic-overview-urp">-</strong></div>
+              <div class="details-kv"><span>Messages</span><strong id="topic-overview-messages">-</strong></div>
+              <div class="details-kv"><span>Cleanup Policy</span><strong id="topic-overview-cleanup">-</strong></div>
+              <div class="details-kv"><span>Segment Size</span><strong id="topic-overview-segment-size">-</strong></div>
+              <div class="details-kv"><span>Segment Count</span><strong id="topic-overview-segment-count">-</strong></div>
+            </div>
+
+            <div class="topic-messages-head" id="topic-consumers-head" hidden>
+              <h3>Consumers</h3>
+            </div>
+            <p class="details-empty" id="topic-consumers-empty" hidden>No active consumer groups for this topic.</p>
+            <div class="table-wrap" id="topic-consumers-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Group</th>
+                    <th>State</th>
+                    <th>Active Consumers</th>
+                    <th>Total Lag</th>
+                  </tr>
+                </thead>
+                <tbody id="topic-consumers-body"></tbody>
+              </table>
+            </div>
+
             <div class="table-wrap" id="topic-partitions-wrap" hidden>
               <table>
                 <thead>
@@ -106,6 +141,41 @@
                 </thead>
                 <tbody id="topic-partitions-body"></tbody>
               </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel" id="topic-messages-panel" data-view="topics">
+          <div class="panel-head">
+            <h2>Topic Messages</h2>
+            <button class="panel-action" id="topic-messages-reload" type="button">Reload</button>
+          </div>
+          <div class="details-body">
+            <p class="details-empty" id="topic-messages-status" hidden>Loading topic messages...</p>
+            <div class="table-wrap" id="topic-messages-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Partition</th>
+                    <th>Offset</th>
+                    <th>Timestamp</th>
+                    <th>Key Size</th>
+                    <th>Value Size</th>
+                    <th>Value Preview</th>
+                  </tr>
+                </thead>
+                <tbody id="topic-messages-body"></tbody>
+              </table>
+            </div>
+
+            <div class="message-view" id="topic-message-view" hidden>
+              <div class="message-view-meta" id="topic-message-meta">Select a message to inspect key/value payload.</div>
+              <div class="message-view-grid message-view-grid--single">
+                <div class="message-block">
+                  <h4>Payload</h4>
+                  <pre id="topic-message-payload"></pre>
+                </div>
+              </div>
             </div>
           </div>
         </article>
