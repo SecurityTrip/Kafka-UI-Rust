@@ -6,6 +6,15 @@ pub struct Topic {
     pub partitions: u32,
     pub replication_factor: u16,
     pub is_internal: bool,
+    pub partition_details: Vec<TopicPartition>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TopicPartition {
+    pub id: i32,
+    pub leader: i32,
+    pub replicas: Vec<i32>,
+    pub isr: Vec<i32>,
 }
 
 #[derive(Debug, Clone, Serialize)]

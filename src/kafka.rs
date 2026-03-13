@@ -7,7 +7,7 @@ use rdkafka::{
 };
 use thiserror::Error;
 
-use crate::models::{Broker, ClusterOverview, ConsumerGroup, Topic};
+use crate::models::{Broker, ClusterOverview, ConsumerGroup, Topic, TopicPartition};
 
 #[derive(Debug, Clone)]
 pub struct KafkaClient {
@@ -64,6 +64,17 @@ fn fetch_snapshot_blocking(
         .topics()
         .iter()
         .map(|topic| {
+            let partition_details: Vec<TopicPartition> = topic
+                .partitions()
+                .iter()
+                .map(|partition| TopicPartition {
+                    id: partition.id(),
+                    leader: partition.leader(),
+                    replicas: partition.replicas().to_vec(),
+                    isr: partition.isr().to_vec(),
+                })
+                .collect();
+
             let replication_factor = topic
                 .partitions()
                 .iter()
@@ -76,6 +87,7 @@ fn fetch_snapshot_blocking(
                 partitions: topic.partitions().len() as u32,
                 replication_factor,
                 is_internal: topic.name().starts_with("__"),
+                partition_details,
             }
         })
         .collect();

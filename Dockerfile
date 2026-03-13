@@ -1,4 +1,4 @@
-FROM rust:1.94-bookworm AS builder
+﻿FROM rust:1.94-bookworm AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/apache-kafka-ui /usr/local/bin/apache-kafka-ui
-COPY templates ./templates
+COPY --from=builder /app/templates ./templates
 
 ENV APP_HOST=0.0.0.0
 ENV APP_PORT=3000
@@ -30,4 +30,3 @@ ENV RUST_LOG=info
 EXPOSE 3000
 
 CMD ["apache-kafka-ui"]
-
