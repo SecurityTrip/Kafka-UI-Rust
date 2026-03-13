@@ -322,14 +322,22 @@ fn fetch_topic_messages_blocking(
 
     let mut assignment = TopicPartitionList::new();
     for partition in meta_topic.partitions() {
-        assignment.add_partition_offset(topic, partition.id(), Offset::OffsetTail(limit as i64))?;
+        let (low, high) = consumer
+            .fetch_watermarks(topic, partition.id(), timeout)
+            .unwrap_or((0, 0));
+        let start = if high <= low {
+            low
+        } else {
+            (high - limit as i64).max(low)
+        };
+        assignment.add_partition_offset(topic, partition.id(), Offset::Offset(start))?;
     }
     consumer.assign(&assignment)?;
 
     let mut messages: Vec<TopicMessage> = Vec::new();
     let mut idle_polls = 0usize;
-    while messages.len() < limit && idle_polls < 4 {
-        match consumer.poll(Duration::from_millis(70)) {
+    while messages.len() < limit && idle_polls < 10 {
+        match consumer.poll(Duration::from_millis(100)) {
             Some(Ok(message)) => {
                 idle_polls = 0;
                 let key = message.key().map(|v| String::from_utf8_lossy(v).to_string());
