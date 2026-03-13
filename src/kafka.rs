@@ -471,7 +471,7 @@ fn fetch_topic_overview_blocking(
     let consumers = fetch_topic_consumers_via_cli(bootstrap_servers, topic, &group_states);
 
     let (cleanup_policy, segment_size_bytes) =
-        fetch_topic_configs(bootstrap_servers, topic).unwrap_or_else(|| ("-".to_string(), None));
+        fetch_topic_configs(bootstrap_servers, topic).unwrap_or_else(|| ("delete".to_string(), None));
 
     let size_bytes = topic_sizes.get(topic).copied();
     let segment_count = match (size_bytes, segment_size_bytes) {
@@ -522,13 +522,17 @@ fn fetch_topic_configs(bootstrap_servers: &str, topic: &str) -> Option<(String, 
     }
 
     let text = String::from_utf8_lossy(&output.stdout);
-    let mut cleanup_policy = "-".to_string();
+    let mut cleanup_policy = "delete".to_string();
     let mut segment_size_bytes = None;
 
     for line in text.lines() {
         if let Some(pos) = line.find("cleanup.policy=") {
             let tail = &line[(pos + "cleanup.policy=".len())..];
-            cleanup_policy = tail.split_whitespace().next().unwrap_or("-").to_string();
+            cleanup_policy = tail
+                .split_whitespace()
+                .next()
+                .unwrap_or("delete")
+                .to_string();
         }
         if let Some(pos) = line.find("segment.bytes=") {
             let tail = &line[(pos + "segment.bytes=".len())..];

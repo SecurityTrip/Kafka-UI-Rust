@@ -370,14 +370,18 @@
     }
 
     if (state.topicOverviewLoading) {
-      if (state.topicOverview) {
-        refs.topicOverviewStatus.hidden = true;
-        refs.topicOverviewGrid.hidden = false;
-        return;
-      }
       refs.topicOverviewStatus.hidden = false;
-      refs.topicOverviewStatus.textContent = "Loading topic overview...";
-      refs.topicOverviewGrid.hidden = true;
+      refs.topicOverviewStatus.innerHTML =
+        "<span class=\"inline-spinner\" aria-label=\"Loading topic overview\"></span> Loading topic overview...";
+      refs.topicOverviewGrid.hidden = false;
+      refs.topicOverviewType.textContent = "-";
+      refs.topicOverviewIsr.textContent = "-";
+      refs.topicOverviewReplicas.textContent = "-";
+      refs.topicOverviewUrp.textContent = "-";
+      refs.topicOverviewMessages.textContent = "-";
+      refs.topicOverviewCleanup.textContent = "-";
+      refs.topicOverviewSegmentSize.textContent = "-";
+      refs.topicOverviewSegmentCount.textContent = "-";
       refs.topicConsumersEmpty.hidden = true;
       refs.topicConsumersWrap.hidden = true;
       refs.topicConsumersBody.innerHTML = "";
@@ -412,6 +416,7 @@
     }
 
     refs.topicOverviewStatus.hidden = true;
+    refs.topicOverviewStatus.textContent = "";
     refs.topicOverviewGrid.hidden = false;
     refs.topicOverviewType.textContent = String(overview.topic_type || "-");
     refs.topicOverviewIsr.textContent = formatInteger(overview.in_sync_replicas);
